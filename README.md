@@ -32,8 +32,8 @@
 
 # 电路图及细节
 ![遥控器电路图](./电路图及数据/controller.jpg)
-[!百叶窗电路图](./电路图及数据/shutter.jpg)
-[!光强变化测试](./电路图及数据/light-params.jpg)
-[!机械细节](./电路图及数据/details.jpg)
+![百叶窗电路图](./电路图及数据/shutter.jpg)
+![光强变化测试](./电路图及数据/light-params.jpg)
+![机械细节](./电路图及数据/details.jpg)
 
 
