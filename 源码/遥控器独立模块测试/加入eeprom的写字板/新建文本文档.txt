@@ -1,0 +1,2 @@
+void Model4_Send_Data(void);
+void Model4_Sve_Data(void);

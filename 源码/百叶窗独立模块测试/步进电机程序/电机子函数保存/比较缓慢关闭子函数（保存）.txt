@@ -1,0 +1,95 @@
+void Motor_CompSlowlyDown(void){
+
+char i,j;
+speedlevel=2;
+spcount=0;
+step_index=0;
+for(i=0;i<=7;i++){
+	for(j=0;j<=15;j++){
+		HadBeenDone=0;
+		TH0=0xFE;
+		TL0=0x0C;
+		TR0=1;
+		delay(1);
+		if(HadBeenDone==1){
+			if(spcount<=0){
+			spcount=speedlevel;
+			if (stop_flag==1)
+        {
+    P1_0 = 0;
+    P1_1 = 0;
+    P1_2 = 0;
+    P1_3 = 0;
+    return;
+        }
+
+switch(step_index)
+{
+case 0: //0
+    P1_0 = 1;
+    P1_1 = 0;
+    P1_2 = 0;
+    P1_3 = 0;
+    break;
+case 1: //0、1
+    P1_0 = 1;
+    P1_1 = 1;
+    P1_2 = 0;
+    P1_3 = 0;
+    break;
+case 2: //1
+    P1_0 = 0;
+    P1_1 = 1;
+    P1_2 = 0;
+    P1_3 = 0;
+    break;
+case 3: //1、2
+    P1_0 = 0;
+    P1_1 = 1;
+    P1_2 = 1;
+    P1_3 = 0;
+    break;
+case 4: //2
+    P1_0 = 0;
+    P1_1 = 0;
+    P1_2 = 1;
+    P1_3 = 0;
+    break;
+case 5: //2、3
+    P1_0 = 0;
+    P1_1 = 0;
+    P1_2 = 1;
+    P1_3 = 1;
+    break;
+case 6: //3
+    P1_0 = 0;
+    P1_1 = 0;
+    P1_2 = 0;
+    P1_3 = 1;
+    break;
+case 7: //3、0
+    P1_0 = 1;
+    P1_1 = 0;
+    P1_2 = 0;
+    P1_3 = 1;
+}
+
+
+    step_index--;
+    if (step_index<0)
+      step_index=7;
+
+
+
+			
+			}
+		}
+
+	
+	}
+Motor_StepCounter++;
+}
+TR0=0;
+}
+
+

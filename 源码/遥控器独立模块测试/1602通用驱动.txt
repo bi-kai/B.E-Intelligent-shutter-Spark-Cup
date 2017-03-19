@@ -1,0 +1,177 @@
+void lcd1602_init(void);
+void lcd1602_write_a_page(uchar *buffer,uchar addr,uchar bytenum);		//LCD 子函数
+void lcd1602_write_onedata(uchar onebyte);
+void lcd1602_row_addr(uchar write_addr);
+void lcd1602_clear(void); 
+void lcd1602_write_seq(void);
+void lcd1602_delay(unsigned int k);
+
+void main(void)
+{
+
+lcd1602_init(void);
+lcd1602_write_a_page("123456789012345!",0x80,16);		//第一行起始地址0x80 终止地址0x8F
+lcd1602_write_a_page("123456789012345?",0xC0,16);		//第二行起始地址0xC0 终止地址0xCF				
+
+}
+
+
+void lcd1602_delay(unsigned int k) 
+{ 
+        uint i;
+	uchar j;
+        for(i=0;i<k;i++) 
+        { 
+                for(j=0;j<200;j++) 
+                {;} 
+        } 
+} 
+
+void lcd1602_write_seq(void) 
+{ 
+        RS=0; 
+        RW=0; 
+        E=0; 
+        lcd1602_delay(5); 
+        E=1; 
+} 
+ 
+void lcd1602_clear(void) 
+{ 
+        lcd_bus=0x01; 
+        lcd1602_write_seq(); 
+} 
+
+void lcd1602_row_addr(uchar write_addr) 
+{ 
+        lcd_bus=write_addr; 
+        lcd1602_write_seq(); 
+} 
+ 
+void lcd1602_init(void) 
+{ 
+
+        lcd1602_delay(5); 
+        lcd1602_clear(); 
+        lcd_bus=0x38; 
+        lcd1602_write_seq(); 
+        lcd_bus=0x0c; 
+        lcd1602_write_seq(); 
+        lcd_bus=0x06; 
+        lcd1602_write_seq();
+		lcd1602_clear(); 
+} 
+ 
+void lcd1602_write_onedata(uchar onebyte) 
+{ 
+        lcd_bus=onebyte; 
+        RS=1; 
+        RW=0; 
+        E=0; 
+        lcd1602_delay(5); 
+        E=1; 
+} 
+
+void lcd1602_write_a_page(uchar *buffer,uchar addr,uchar bytenum) 
+{ 
+        uchar i; 
+        lcd1602_row_addr(addr); 
+        for(i=0;i<bytenum;i++) 
+        { 
+                lcd1602_write_onedata(buffer[i]); 
+        } 
+}
+----------------------------------------------------
+#include<reg52.h>
+#define uchar unsigned char 
+#define uint unsigned int
+
+sbit RS=P2^2;
+sbit RW=P2^3;
+sbit E=P2^4;
+
+uchar lcd_bus;
+
+void lcd1602_init(void);
+void lcd1602_write_a_page(uchar *buffer,uchar addr,uchar bytenum);		//LCD 子函数
+void lcd1602_write_onedata(uchar onebyte);
+void lcd1602_row_addr(uchar write_addr);
+void lcd1602_clear(void); 
+void lcd1602_write_seq(void);
+void lcd1602_delay(unsigned int k);
+
+void main(void)
+{
+
+lcd1602_init();
+lcd1602_write_a_page("123456789012345!",0x80,16);		//第一行起始地址0x80 终止地址0x8F
+lcd1602_write_a_page("123456789012345?",0xC0,16);		//第二行起始地址0xC0 终止地址0xCF				
+
+}
+
+
+void lcd1602_delay(unsigned int k) 
+{ 
+        uint i;
+	uchar j;
+        for(i=0;i<k;i++) 
+        { 
+                for(j=0;j<200;j++) 
+                {;} 
+        } 
+} 
+
+void lcd1602_write_seq(void) 
+{ 
+        RS=0; 
+        RW=0; 
+        E=0; 
+        lcd1602_delay(5); 
+        E=1; 
+} 
+ 
+void lcd1602_clear(void) 
+{ 
+        lcd_bus=0x01; 
+        lcd1602_write_seq(); 
+} 
+
+void lcd1602_row_addr(uchar write_addr) 
+{ 
+        lcd_bus=write_addr; 
+        lcd1602_write_seq(); 
+} 
+ 
+void lcd1602_init(void) 
+{ 
+
+        lcd1602_delay(5); 
+        lcd1602_clear(); 
+        lcd_bus=0x38; 
+        lcd1602_write_seq(); 
+        lcd_bus=0x0c; 
+        lcd1602_write_seq(); 
+        lcd_bus=0x06; 
+        lcd1602_write_seq();
+		lcd1602_clear(); 
+} 
+ 
+void lcd1602_write_onedata(uchar onebyte) 
+{ 
+        lcd_bus=onebyte; 
+        RS=1; 
+        RW=0; 
+        E=0; 
+        lcd1602_delay(5); 
+        E=1; 
+} 
+
+void lcd1602_write_a_page(uchar *buffer,uchar addr,uchar bytenum) 
+{ 
+        uchar i; 
+        lcd1602_row_addr(addr); 
+        for(i=0;i<bytenum;i++) 
+        { 
+                lcd1602_write_onedata(buffer[i]); 
+        } 
+}

@@ -1,0 +1,7 @@
+建造目标 '目标 1'
+正在编绎 实验eeprom.c... 
+实验EEPROM.C(6): 错误 C202: 'Model4_WTemprature': undefined identifier
+实验EEPROM.C(7): 错误 C202: 'Model4_WTemprature': undefined identifier
+实验EEPROM.C(8): 错误 C202: 'Model4_WTemprature': undefined identifier
+实验EEPROM.C(15): 错误 C129: missing ';' before 'Model4_WTemprature'
+目标没产生

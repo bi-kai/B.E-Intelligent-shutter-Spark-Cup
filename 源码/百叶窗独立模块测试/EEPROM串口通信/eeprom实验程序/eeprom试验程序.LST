@@ -1,0 +1,902 @@
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 1   
+
+
+C51 COMPILER V7.00, COMPILATION OF MODULE EEPROMÊ__é___ò
+OBJECT MODULE PLACED IN eepromÊÔÑé³ÌÐò.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE eepromÊÔÑé³ÌÐò.c BROWSE DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          #include < reg51.h >
+   2          #include < intrins.h >
+   3          
+   4          #define uchar unsigned char
+   5          #define uint  unsigned int
+   6          
+   7          sbit DQ = P1^4 ;  //¶¨ÒåDS18B20¶Ë¿ÚDQ
+   8          sbit BEEP=P1^3  ; //·äÃùÆ÷Çý¶¯Ïß
+   9          
+  10          bit presence  ;
+  11          
+  12          sbit LCD_RS = P2^2 ;
+  13          sbit LCD_RW = P2^3 ;
+  14          sbit LCD_EN = P2^4 ;
+  15          
+  16          uchar code  cdis1[ ] = {" welcome to JLDZ "} ;//¼ÎÀÖµç×ÓËõÐ´
+  17          uchar code  cdis2[ ] = {" WENDU:    .  C "} ;
+  18          uchar code  cdis3[ ] = {" DS18B20  ERR0R "} ;
+  19          uchar code  cdis4[ ] = {"  PLEASE CHECK  "} ;
+  20          
+  21          unsigned char data  temp_data[2] = {0x00,0x00} ;
+  22          unsigned char data  display[5] =   {0x00,0x00,0x00,0x00,0x00} ;
+  23          unsigned char code  ditab[16] =    {0x00,0x01,0x01,0x02,0x03,0x03,0x04,0x04,
+  24                                                                  0x05,0x06,0x06,0x07,0x08,0x08,0x09,0x09} ;///*Ð¡Êý
+             -Î»±í£¬ËÄÉáÎåÈë*/
+  25          //
+  26          void beep() ;
+  27          unsigned char code  mytab[8] = {0x0C,0x12,0x12,0x0C,0x00,0x00,0x00,0x00} ;
+  28          
+  29          #define delayNOP() ; {_nop_() ;_nop_() ;_nop_() ;_nop_() ;} ;
+  30          
+  31          /*************************************************************************************/
+  32          /********************************eeprom¼ÓÈë²¿·ÖÒ»*************************************/
+  33          
+  34          uchar code word[]={0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x3a,0x20};
+  35          uchar dispbuf[8],h=12,m,s,counter;
+  36          
+  37          /*******¸üÐÂ»º³åÇø×Ó³ÌÐò*******/
+  38          void newbuf()
+  39          {
+  40   1       dispbuf[0]=s%10;
+  41   1       dispbuf[1]=s/10;
+  42   1       dispbuf[3]=m%10;
+  43   1       dispbuf[4]=m/10;
+  44   1       dispbuf[6]=h%10;
+  45   1       dispbuf[7]=h/10;
+  46   1      }
+  47          
+  48          /***********************************eeprom¼ÓÈëµÄµÚÈý²¿·Ö******************************/
+  49          /*************************************************************************************/
+  50          /*************************************************************************************/
+  51          #define ENABLE_ISP 0x80 //EEPROM²Ù×÷²ÎÊýÉèÖÃ£ºÏµÍ³¹¤×÷Ê±ÖÓ<40MHz Ê±£¬¶ÔIAP_CONTR ¼Ä´æÆ÷ÉèÖÃ´ËÖµ
+  52          
+  53          sfr IAP_DATA    = 0xe2;
+  54          sfr IAP_ADDRH   = 0xe3;
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 2   
+
+  55          sfr IAP_ADDRL   = 0xe4;
+  56          sfr IAP_CMD     = 0xe5;
+  57          sfr IAP_TRIG    = 0xe6;
+  58          sfr IAP_CONTR   = 0xe7;
+  59          //¶¨ÒåFlash ²Ù×÷µÈ´ýÊ±¼ä¼°ÔÊÐíIAP/ISP/EEPROM ²Ù×÷µÄ³£Êý
+  60          
+  61          union union_temp16{unsigned int un_temp16;unsigned char un_temp8[2];}my_unTemp16;
+  62          
+  63          //unsigned char temp[20]="";
+  64          
+  65          unsigned char EEPROM_read(unsigned int add);   //¶ÁÒ»×Ö½Ú£¬µ÷ÓÃÇ°Ðè´ò¿ªIAP ¹¦ÄÜ
+  66          void EEPROM_write(unsigned int, unsigned char ch); //×Ö½Ú±à³Ì£¬µ÷ÓÃÇ°Ðè´ò¿ªIAP ¹¦ÄÜ
+  67          void EEPROM_erase(unsigned int add);            //²Á³ýÉÈÇø
+  68          void EEPROM_IAP_Disable();                       //¹Ø±ÕIAP ¹¦ÄÜ
+  69          
+  70          void save_data_to_EEPROM(unsigned char num);
+  71          
+  72          void send(unsigned char str[]);
+  73          void lcd_pos(uchar pos);
+  74          /************************************************    EEPROM²Ù×÷º¯Êý   ************************************
+             -**************/
+  75          
+  76          unsigned char EEPROM_read(unsigned int add)      //¶ÁÒ»×Ö½Ú£¬µ÷ÓÃÇ°Ðè´ò¿ªIAP ¹¦ÄÜ£¬Èë¿Ú:DPTR = ×Ö½ÚµØÖ·£¬·µ»Ø:
+             -A = ¶Á³ö×Ö½Ú
+  77          {
+  78   1          IAP_DATA = 0x00;
+  79   1          IAP_CMD = 0x01;                 //IAP/ISP/EEPROM ×Ö½Ú¶ÁÃüÁî
+  80   1          my_unTemp16.un_temp16 = add;
+  81   1          IAP_ADDRH = my_unTemp16.un_temp8[0];    //ÉèÖÃÄ¿±êµ¥ÔªµØÖ·µÄ¸ß8 Î»µØÖ·
+  82   1          IAP_ADDRL = my_unTemp16.un_temp8[1];    //ÉèÖÃÄ¿±êµ¥ÔªµØÖ·µÄµÍ8 Î»µØÖ·
+  83   1          //EA = 0;
+  84   1          IAP_TRIG = 0x46;   //   46???   ÏÈËÍ 5Ah,ÔÙËÍA5h µ½ISP/IAP ´¥·¢¼Ä´æÆ÷,Ã¿´Î¶¼ÐèÈç´Ë
+  85   1          IAP_TRIG = 0xB9;   //   B9???   ËÍÍêA5h ºó£¬ISP/IAP ÃüÁîÁ¢¼´±»´¥·¢Æð¶¯
+  86   1          _nop_();
+  87   1          //EA = 1;
+  88   1          return (IAP_DATA);
+  89   1      }
+  90          
+  91          
+  92          void EEPROM_write(unsigned int add, unsigned char ch) //×Ö½Ú±à³Ì£¬µ÷ÓÃÇ°Ðè´ò¿ªIAP ¹¦ÄÜ£¬Èë¿Ú:DPTR = ×Ö½ÚµØ
+             -Ö·, A= Ðë±à³Ì×Ö½ÚµÄÊý¾Ý
+  93          {
+  94   1          IAP_CMD = 0x02;                 //IAP/ISP/EEPROM ×Ö½Ú±à³ÌÃüÁî
+  95   1          my_unTemp16.un_temp16 = add;
+  96   1              IAP_ADDRH = my_unTemp16.un_temp8[0];    //ÉèÖÃÄ¿±êµ¥ÔªµØÖ·µÄ¸ß8 Î»µØÖ·
+  97   1              IAP_ADDRL = my_unTemp16.un_temp8[1];    //ÉèÖÃÄ¿±êµ¥ÔªµØÖ·µÄµÍ8 Î»µØÖ·
+  98   1              IAP_DATA = ch;                  //Òª±à³ÌµÄÊý¾ÝÏÈËÍ½øIAP_DATA ¼Ä´æÆ÷
+  99   1              //EA = 0;
+ 100   1              IAP_TRIG = 0x46;   //   46???   ÏÈËÍ 5Ah,ÔÙËÍA5h µ½ISP/IAP ´¥·¢¼Ä´æÆ÷,Ã¿´Î¶¼ÐèÈç´Ë
+ 101   1              IAP_TRIG = 0xB9;   //   B9???   ËÍÍêA5h ºó£¬ISP/IAP ÃüÁîÁ¢¼´±»´¥·¢Æð¶¯
+ 102   1          _nop_();
+ 103   1              //EA = 1;
+ 104   1      }
+ 105          
+ 106          
+ 107          void EEPROM_erase(unsigned int add)//²Á³ýÉÈÇø, Èë¿Ú:DPTR = ÉÈÇøµØÖ·
+ 108          {
+ 109   1              IAP_CMD = 0x03;                 //IAP/ISP/EEPROM ÉÈÇø²Á³ýÃüÁî
+ 110   1          my_unTemp16.un_temp16 = add;
+ 111   1          IAP_ADDRH = my_unTemp16.un_temp8[0];    //ÉèÖÃÄ¿±êµ¥ÔªµØÖ·µÄ¸ß8 Î»µØÖ·
+ 112   1          IAP_ADDRL = my_unTemp16.un_temp8[1];    //ÉèÖÃÄ¿±êµ¥ÔªµØÖ·µÄµÍ8 Î»µØÖ·
+ 113   1      
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 3   
+
+ 114   1          //EA = 0;
+ 115   1          IAP_TRIG = 0x46;   //   46???   ÏÈËÍ 5Ah,ÔÙËÍA5h µ½ISP/IAP ´¥·¢¼Ä´æÆ÷,Ã¿´Î¶¼ÐèÈç´Ë
+ 116   1          IAP_TRIG = 0xB9;   //   B9???   ËÍÍêA5h ºó£¬ISP/IAP ÃüÁîÁ¢¼´±»´¥·¢Æð¶¯
+ 117   1          _nop_();
+ 118   1          //EA = 1;
+ 119   1      }
+ 120          
+ 121          void EEPROM_IAP_Disable()
+ 122          {
+ 123   1          //¹Ø±ÕIAP ¹¦ÄÜ, ÇåÏà¹ØµÄÌØÊâ¹¦ÄÜ¼Ä´æÆ÷,Ê¹CPU ´¦ÓÚ°²È«×´Ì¬
+ 124   1          //Ò»´ÎÁ¬ÐøµÄIAP ²Ù×÷Íê³ÉÖ®ºó½¨Òé¹Ø±ÕIAP ¹¦ÄÜ,²»ÐèÒªÃ¿´Î¶¼¹Ø
+ 125   1              IAP_CONTR = 0;      //¹Ø±ÕIAP ¹¦ÄÜ
+ 126   1              IAP_CMD   = 0;      //ÇåÃüÁî¼Ä´æÆ÷,Ê¹ÃüÁî¼Ä´æÆ÷ÎÞÃüÁî,´Ë¾ä¿É²»ÓÃ
+ 127   1              IAP_TRIG = 0;      //ÇåÃüÁî´¥·¢¼Ä´æÆ÷,Ê¹ÃüÁî´¥·¢¼Ä´æÆ÷ÎÞ´¥·¢,´Ë¾ä¿É²»ÓÃ
+ 128   1              IAP_ADDRH = 0;
+ 129   1              IAP_ADDRL = 0;
+ 130   1      }
+ 131          
+ 132          void send(unsigned char str[])
+ 133          {
+ 134   1              unsigned int i=0;
+ 135   1              while(str[i]!='\0')
+ 136   1              {
+ 137   2                      SBUF=str[i];
+ 138   2                      while(!TI);
+ 139   2                      TI=0;
+ 140   2                      i++;
+ 141   2                      }
+ 142   1      }
+ 143          
+ 144          /**********************************×Ô¼º¼ÓÈëµÄº¯Êý*********************************************/
+ 145          uint eeprom_address=0x2000;
+ 146          uchar Model4_WTime[8];
+ 147          uchar Model4_WTem[8];
+ 148          uchar Model4_RTime[9];
+ 149          uchar Model4_RTem[9];
+ 150          uchar Model4_rkey;
+ 151          uchar sp=0;
+ 152          long k=0;                               //²Á³öÉÈÇø¼ÆÊýÆ÷
+ 153          uint Model4_EEPROM_Address=0x2000;
+ 154          uchar Model4_rkey;
+ 155          bit Model4_SendFlag=0;          //Îª0ÔÊÐí·¢ËÍ£¬Îª1²»ÔÊÐí·¢ËÍ£¨±êÖ¾Î»£©
+ 156          uchar Model4_Key=0;                     //Ä£Ê½ËÄ¼üÅÌÉ¨Ãè
+ 157          /*******************************/
+ 158          sbit Bu_SetZero=P1^7;                   //Ä£Ê½ËÄ¸´ÓÃ£ºÖØÐÂ·¢ËÍ
+ 159          sbit Bu_MoveUp=P3^6;                            //Ä£Ê½ËÄ¸´ÓÃ£º¿ªÊ¼·¢ËÍÐÅÏ¢
+ 160          sbit Bu_MoveDown=P3^7;                  //Ä£Ê½ËÄ¸´ÓÃ£ºÍ£Ö¹·¢ËÍÐÅÏ¢
+ 161          /**************************º¯ÊýÉùÃ÷************************/
+ 162          void INIT_NewTemp(void);
+ 163          void send_data_from_EEPROM(void);
+ 164          uchar Model4_ChangeForSave(uchar ucfs);
+ 165          void send_data_from_EEPROM(void);
+ 166          uchar m4_n;     //Ä£Ê½ËÄÖÐÏÔÊ¾¼ÆÊý
+ 167          /*****************************/
+ 168          void delay1(int ms);
+ 169          void lcd_wdat(uchar dat);
+ 170          void lcd_pos(uchar pos);
+ 171          uchar Menu_INT1=0;
+ 172          uchar BK_count; //±¨¾¯×¨ÓÃ
+ 173          uchar code  cdis7[ ] = {"Position:model4."};
+ 174          uchar code Function12[ ]={"  loading...... "};
+ 175          uchar code Function13[ ]={"  Sending...... "};
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 4   
+
+ 176          uchar code Function14[ ]={"  Stop Sending."};
+ 177          uchar code Function15[ ]={"  EEPROM ready  "};
+ 178          uchar code Function16[ ]={"  Restart......"};
+ 179          
+ 180          void delay500(void){
+ 181   1      
+ 182   1              uchar i;
+ 183   1              for(i=250;i>0;i--){_nop_();}
+ 184   1      }
+ 185          
+ 186          
+ 187          /**********************************************************/
+ 188          
+ 189          void save_data_to_EEPROM(void){
+ 190   1      
+ 191   1              uint i=0,j=0,disc=0;
+ 192   1      
+ 193   1              INIT_NewTemp();
+ 194   1              IAP_CONTR = ENABLE_ISP;         //´ò¿ªIAP ¹¦ÄÜ, ÉèÖÃFlash ²Ù×÷µÈ´ýÊ±¼ä
+ 195   1      
+ 196   1              while(i<8){
+ 197   2              EEPROM_write(eeprom_address,Model4_WTime[i]);
+ 198   2              eeprom_address++;
+ 199   2              i++;
+ 200   2              k++;
+ 201   2              if((k%508)==0){disc=(0x2000+((k/511)+1)*0x200+256);EEPROM_erase(disc);}
+ 202   2              if(eeprom_address>=(0x2fdf)){eeprom_address=0x2000;k=0;
+ 203   3              IAP_CONTR = ENABLE_ISP; 
+ 204   3              EEPROM_erase(0x2000);
+ 205   3              EEPROM_IAP_Disable();}
+ 206   2              }
+ 207   1              while(j<8){
+ 208   2              EEPROM_write(eeprom_address,Model4_WTem[j]);
+ 209   2              eeprom_address++;
+ 210   2              j++;
+ 211   2              k++;
+ 212   2              if((k%508)==0){disc=(0x2000+((k/511)+1)*0x200+256);EEPROM_erase(disc);}
+ 213   2              if(eeprom_address>=(0x2fdf)){eeprom_address=0x2000;k=0;
+ 214   3              IAP_CONTR = ENABLE_ISP; 
+ 215   3              EEPROM_erase(0x2000);
+ 216   3              EEPROM_IAP_Disable();
+ 217   3              }
+ 218   2              }
+ 219   1              
+ 220   1              EEPROM_IAP_Disable(); //¹Ø±ÕIAP ¹¦ÄÜ, ÇåÏà¹ØµÄÌØÊâ¹¦ÄÜ¼Ä´æÆ÷,Ê¹CPU ´¦ÓÚ°²È«×´Ì¬
+ 221   1              }
+ 222          
+ 223          void INIT_NewTemp(void){
+ 224   1      
+ 225   1      
+ 226   1              Model4_WTem[0]=display[3];
+ 227   1              Model4_WTem[1]=display[2];
+ 228   1              Model4_WTem[2]=display[1];
+ 229   1              Model4_WTem[3]='\x2E';
+ 230   1              Model4_WTem[4]=display[0];
+ 231   1              Model4_WTem[5]='\x60';
+ 232   1              Model4_WTem[6]='\x43';
+ 233   1              Model4_WTem[7]='\x20';  
+ 234   1      
+ 235   1              newbuf();
+ 236   1              Model4_WTime[0]=Model4_ChangeForSave(dispbuf[7]);
+ 237   1              Model4_WTime[1]=Model4_ChangeForSave(dispbuf[6]);
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 5   
+
+ 238   1              Model4_WTime[2]='\x3A'; //Ã°ºÅ
+ 239   1              Model4_WTime[3]=Model4_ChangeForSave(dispbuf[4]);
+ 240   1              Model4_WTime[4]=Model4_ChangeForSave(dispbuf[3]);
+ 241   1              Model4_WTime[5]='\x3A'; //Ã°ºÅ
+ 242   1              Model4_WTime[6]=Model4_ChangeForSave(dispbuf[1]);
+ 243   1              Model4_WTime[7]=Model4_ChangeForSave(dispbuf[0]);
+ 244   1      
+ 245   1              }
+ 246          
+ 247          uchar Model4_ChangeForSave(uchar ucfs){
+ 248   1      
+ 249   1              uchar tmp1;
+ 250   1              tmp1=ucfs;
+ 251   1              tmp1=word[tmp1];
+ 252   1              return tmp1;
+ 253   1      
+ 254   1      }
+ 255          
+ 256          void send_data_from_EEPROM(void){
+ 257   1      
+ 258   1      uchar si=0,sj=0;
+ 259   1      if(Model4_EEPROM_Address>=0x2fdf){Model4_EEPROM_Address=0x2000;}
+ 260   1              if(Model4_EEPROM_Address<0x2fdf){
+ 261   2              
+ 262   2                      IAP_CONTR = ENABLE_ISP;         //´ò¿ªIAP ¹¦ÄÜ, ÉèÖÃFlash ²Ù×÷µÈ´ýÊ±¼ä
+ 263   2                      while(si<8){
+ 264   3                      Model4_RTime[si]=EEPROM_read(Model4_EEPROM_Address); 
+ 265   3      
+ 266   3                      si++;
+ 267   3                      Model4_EEPROM_Address++;
+ 268   3                      }
+ 269   2                      Model4_RTime[8]='\0';
+ 270   2              send(Model4_RTime);
+ 271   2              send("\x20");
+ 272   2      
+ 273   2      
+ 274   2              
+ 275   2                      while(sj<8){
+ 276   3                      
+ 277   3                              Model4_RTem[sj]=EEPROM_read(Model4_EEPROM_Address); 
+ 278   3                              sj++;
+ 279   3                              Model4_EEPROM_Address++;
+ 280   3              
+ 281   3      }
+ 282   2              Model4_RTem[8]='\0';
+ 283   2      send(Model4_RTem);
+ 284   2      
+ 285   2      send("\t");
+ 286   2      send("\t");
+ 287   2      //send("\t");
+ 288   2      
+ 289   2      sp++;
+ 290   2      if((sp%3)==0)send("\n");
+ 291   2      if(sp==9)sp=0;
+ 292   2              }
+ 293   1      }
+ 294          
+ 295          /****************************Ä£Ê½ËÄ°´¼üÉ¨Ãè*****************************************/
+ 296          uchar Model4_KeyScan(void){
+ 297   1      
+ 298   1      Bu_SetZero=1;                   //Ä£Ê½ËÄ¸´ÓÃ£ºÖØÐÂ·¢ËÍ
+ 299   1      Bu_MoveUp=1;                            //Ä£Ê½ËÄ¸´ÓÃ£º¿ªÊ¼·¢ËÍÐÅÏ¢
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 6   
+
+ 300   1      Bu_MoveDown=1;                  //Ä£Ê½ËÄ¸´ÓÃ£ºÍ£Ö¹·¢ËÍÐÅÏ¢
+ 301   1      Model4_Key=0;
+ 302   1      
+ 303   1      if(Bu_MoveUp==0){
+ 304   2      delay1(5);
+ 305   2      if(Bu_MoveUp==0)
+ 306   2      Model4_Key=1;
+ 307   2      while(Bu_MoveUp==0);
+ 308   2      }
+ 309   1      
+ 310   1      
+ 311   1      if(Bu_MoveDown==0){
+ 312   2      delay1(5);
+ 313   2      if(Bu_MoveDown==0)
+ 314   2      Model4_Key=2;
+ 315   2      while(Bu_MoveDown==0);
+ 316   2      }
+ 317   1      
+ 318   1      
+ 319   1      if(Bu_SetZero==0){
+ 320   2      delay1(5);
+ 321   2      if(Bu_SetZero==0)
+ 322   2      Model4_Key=3;
+ 323   2      while(Bu_SetZero==0);
+ 324   2      }
+ 325   1      
+ 326   1      return Model4_Key;      
+ 327   1      }
+ 328          
+ 329          
+ 330          /***********************************************/
+ 331          /***********************************************/
+ 332          /***********************************************/
+ 333          /***********************************************/
+ 334          /***********************************************/
+ 335          /***********************************************/
+ 336          /***********************************************/
+ 337          void Self_BK_Define4(void){    //ÓÃÓÚÄ£Ê½Èý£¬ÏÔÊ¾°´¼ü²Ù×÷
+ 338   1      
+ 339   1              uchar  m ;
+ 340   1          lcd_pos(0) ;                //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚÒ»ÐÐµÄµÚ1¸ö×Ö·û
+ 341   1           m = 0 ;
+ 342   1          while(cdis7[m]!= '\0')
+ 343   1           {                         //ÏÔÊ¾×Ö·û
+ 344   2             lcd_wdat(cdis7[m]) ;
+ 345   2             m++ ;
+ 346   2           }
+ 347   1      
+ 348   1          lcd_pos(0x40) ;             //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚ¶þÐÐµÚ1¸ö×Ö·û
+ 349   1           m = 0 ;
+ 350   1          while(Function12[m] != '\0')
+ 351   1           {
+ 352   2             lcd_wdat(Function12[m]) ;      //ÏÔÊ¾×Ö·û
+ 353   2             m++ ;
+ 354   2           }
+ 355   1      }
+ 356          
+ 357          
+ 358          
+ 359          
+ 360          void MainModel4(void){
+ 361   1      
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 7   
+
+ 362   1      Self_BK_Define4();
+ 363   1      delay1(600);    
+ 364   1      
+ 365   1      
+ 366   1      while(1){
+ 367   2      
+ 368   2      Model4_rkey=Model4_KeyScan();
+ 369   2      
+ 370   2      if(Model4_rkey==1){
+ 371   3      while(1){send_data_from_EEPROM();
+ 372   4      Model4_rkey=Model4_KeyScan();
+ 373   4      
+ 374   4      if(Model4_rkey==3){Model4_EEPROM_Address=0x2000;
+ 375   5      
+ 376   5      lcd_pos(0x40);
+ 377   5              m4_n=0;
+ 378   5              while(Function16[m4_n]!='\0'){
+ 379   6              lcd_wdat(Function16[m4_n]);
+ 380   6                              m4_n++;
+ 381   6                              }
+ 382   5      delay1(100);
+ 383   5      
+ 384   5      }
+ 385   4      
+ 386   4      lcd_pos(0x40);
+ 387   4              m4_n=0;
+ 388   4              while(Function13[m4_n]!='\0'){
+ 389   5              lcd_wdat(Function13[m4_n]);
+ 390   5                              m4_n++;
+ 391   5                              }
+ 392   4      if((Model4_rkey==2)/*||(((Menu_INT1)%4)==1)||(((Menu_INT1)%4)==0)||(((Menu_INT1)%4)==2)*/)break;
+ 393   4          if(((Menu_INT1)%2)==0)break;        
+ 394   4                              }
+ 395   3                              }
+ 396   2      
+ 397   2      else if(Model4_rkey==2){
+ 398   3      
+ 399   3      while(1){
+ 400   4      
+ 401   4      Model4_rkey=Model4_KeyScan();
+ 402   4      lcd_pos(0x40);
+ 403   4              m4_n=0;
+ 404   4              while(Function14[m4_n]!='\0'){
+ 405   5              lcd_wdat(Function14[m4_n]);
+ 406   5                              m4_n++;
+ 407   5                              }
+ 408   4      if((Model4_rkey==1)/*||(((Menu_INT1)%4)==1)||(((Menu_INT1)%4)==0)||(((Menu_INT1)%4)==2)*/)break;
+ 409   4          if(((Menu_INT1)%2)==0)break;                
+ 410   4      }
+ 411   3                              }
+ 412   2      
+ 413   2      
+ 414   2      else {
+ 415   3      lcd_pos(0x40);
+ 416   3              m4_n=0;
+ 417   3              while(Function15[m4_n]!='\0'){
+ 418   4              lcd_wdat(Function15[m4_n]);
+ 419   4                              m4_n++;
+ 420   4                              }
+ 421   3      }
+ 422   2      
+ 423   2      
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 8   
+
+ 424   2      
+ 425   2      
+ 426   2      
+ 427   2          if(((Menu_INT1)%2)==0)break;
+ 428   2      //if((((Menu_INT1)%4)==1)||(((Menu_INT1)%4)==0)||(((Menu_INT1)%4)==2))break;
+ 429   2      
+ 430   2      }
+ 431   1      }
+ 432          
+ 433          
+ 434          
+ 435          
+ 436          
+ 437          /*************************************************************************************/
+ 438          /***********************************eeprom¼ÓÈë²¿·ÖÒ»½áÊø*******************************/
+ 439          /*************************************************************************************/
+ 440          /*************************************************************************************/
+ 441          /*************************************************************************************/
+ 442          /*************************************************************************************/
+ 443          /*************************************************************************************/
+ 444          void delay1(int ms)
+ 445          {
+ 446   1       unsigned char y ;
+ 447   1        while(ms--)
+ 448   1       {
+ 449   2        for(y = 0 ; y<250 ; y++)
+ 450   2        {
+ 451   3         _nop_() ;
+ 452   3         _nop_() ;
+ 453   3         _nop_() ;
+ 454   3         _nop_() ;
+ 455   3        }
+ 456   2       }
+ 457   1      }
+ 458          
+ 459          /******************************************************************/
+ 460          /*¼ì²éLCDÃ¦×´Ì¬                                                   */
+ 461          /*lcd_busyÎª1Ê±£¬Ã¦£¬µÈ´ý¡£lcd-busyÎª0Ê±,ÏÐ£¬¿ÉÐ´Ö¸ÁîÓëÊý¾Ý¡£   */
+ 462          /******************************************************************/
+ 463          bit lcd_busy()
+ 464           {
+ 465   1          bit result ;
+ 466   1          LCD_RS = 0 ;
+ 467   1          LCD_RW = 1 ;    LCD_EN = 1 ;
+ 468   1          delayNOP() ;
+ 469   1          result = (bit)(P0&0x80) ;
+ 470   1          LCD_EN = 0 ;
+ 471   1          return(result) ;
+ 472   1       }
+ 473          
+ 474          /*Ð´Ö¸ÁîÊý¾Ýµ½LCD                                                  */
+ 475          /*RS=L£¬RW=L£¬E=¸ßÂö³å£¬D0-D7=Ö¸ÁîÂë¡£          */
+ 476          /*******************************************************************/
+ 477          void lcd_wcmd(uchar cmd)
+ 478          {
+ 479   1         while(lcd_busy()) ;
+ 480   1          LCD_RS = 0 ;
+ 481   1          LCD_RW = 0 ;
+ 482   1          LCD_EN = 0 ;
+ 483   1          _nop_() ;
+ 484   1          _nop_() ;
+ 485   1          P0 = cmd ;
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 9   
+
+ 486   1          delayNOP() ;
+ 487   1          LCD_EN = 1 ;
+ 488   1          delayNOP() ;
+ 489   1          LCD_EN = 0 ;
+ 490   1      }
+ 491          
+ 492          /*******************************************************************/
+ 493          /*Ð´ÏÔÊ¾Êý¾Ýµ½LCD                            */
+ 494          /*RS=H£¬RW=L£¬E=¸ßÂö³å£¬D0-D7=Êý¾Ý¡£       */
+ 495          /*******************************************************************/
+ 496          void lcd_wdat(uchar dat)
+ 497          {
+ 498   1         while(lcd_busy()) ;
+ 499   1          LCD_RS = 1 ;
+ 500   1          LCD_RW = 0 ;
+ 501   1          LCD_EN = 0 ;
+ 502   1          P0 = dat ;
+ 503   1          delayNOP() ;
+ 504   1          LCD_EN = 1 ;
+ 505   1          delayNOP() ;
+ 506   1          LCD_EN = 0 ;
+ 507   1      }
+ 508          
+ 509          
+ 510          /*  LCD³õÊ¼»¯Éè¶¨                                                  */
+ 511          /*******************************************************************/
+ 512          void lcd_init()
+ 513          {
+ 514   1          delay1(15) ;
+ 515   1          lcd_wcmd(0x01) ;      //Çå³ýLCDµÄÏÔÊ¾ÄÚÈÝ
+ 516   1          lcd_wcmd(0x38) ;      //16*2ÏÔÊ¾£¬5*7µãÕó£¬8Î»Êý¾Ý
+ 517   1          delay1(5) ;
+ 518   1          lcd_wcmd(0x38) ;
+ 519   1          delay1(5) ;
+ 520   1          lcd_wcmd(0x38) ;
+ 521   1          delay1(5) ;
+ 522   1      
+ 523   1          lcd_wcmd(0x0c) ;      //ÏÔÊ¾¿ª£¬¹Ø¹â±ê
+ 524   1          delay1(5) ;
+ 525   1          lcd_wcmd(0x06) ;      //ÒÆ¶¯¹â±ê
+ 526   1          delay1(5) ;
+ 527   1          lcd_wcmd(0x01) ;      //Çå³ýLCDµÄÏÔÊ¾ÄÚÈÝ
+ 528   1          delay1(5) ;
+ 529   1      }
+ 530          
+ 531          /*  Éè¶¨ÏÔÊ¾Î»ÖÃ                                    */
+ 532          /*******************************************************************/
+ 533          void lcd_pos(uchar pos)
+ 534          {
+ 535   1        lcd_wcmd(pos | 0x80) ;  //Êý¾ÝÖ¸Õë=80+µØÖ·±äÁ¿
+ 536   1      }
+ 537          
+ 538          /*×Ô¶¨Òå×Ö·ûÐ´ÈëCGRAM                                   */
+ 539          /*******************************************************************/
+ 540          void  writetab()
+ 541          {
+ 542   1          unsigned char i ;
+ 543   1          lcd_wcmd(0x40) ;            //Ð´CGRAM
+ 544   1          for (i = 0 ; i< 8 ; i++)
+ 545   1          lcd_wdat(mytab[ i ]) ;
+ 546   1      }
+ 547          
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 10  
+
+ 548          /*us¼¶ÑÓÊ±º¯Êý                                        */
+ 549          /*******************************************************************/
+ 550          
+ 551          void Delay(unsigned int num)
+ 552          {
+ 553   1        while( --num ) ;
+ 554   1      }
+ 555          
+ 556          /*³õÊ¼»¯ds1820                                      */
+ 557          /*******************************************************************/
+ 558          Init_DS18B20(void)
+ 559          {
+ 560   1           DQ = 1 ;      //DQ¸´Î»
+ 561   1           Delay(8) ;    //ÉÔ×öÑÓÊ±
+ 562   1      
+ 563   1           DQ = 0 ;      //µ¥Æ¬»ú½«DQÀ­µÍ
+ 564   1           Delay(90) ;   //¾«È·ÑÓÊ± ´óÓÚ 480us
+ 565   1      
+ 566   1           DQ = 1 ;       //À­¸ß×ÜÏß
+ 567   1           Delay(8) ;
+ 568   1      
+ 569   1           presence = DQ ;    //Èç¹û=0Ôò³õÊ¼»¯³É¹¦ =1Ôò³õÊ¼»¯Ê§°Ü
+ 570   1           Delay(100) ;
+ 571   1           DQ = 1 ;
+ 572   1      
+ 573   1           return(presence) ; //·µ»ØÐÅºÅ£¬0=presence,1= no presence
+ 574   1      }
+ 575          
+ 576          
+ 577          /* ¶ÁÒ»¸ö×Ö½Ú                     */
+ 578          /*******************************************************************/
+ 579           ReadOneChar(void)
+ 580          {
+ 581   1      unsigned char i = 0 ;
+ 582   1      unsigned char dat = 0 ;
+ 583   1      
+ 584   1      for (i = 8 ; i > 0 ; i--)
+ 585   1        {
+ 586   2          DQ = 0 ; // ¸øÂö³åÐÅºÅ
+ 587   2          dat >>= 1 ;
+ 588   2          DQ = 1 ; // ¸øÂö³åÐÅºÅ
+ 589   2      
+ 590   2          if(DQ)
+ 591   2           dat |= 0x80 ;
+ 592   2          Delay(4) ;
+ 593   2        }
+ 594   1      
+ 595   1          return (dat) ;
+ 596   1      }
+ 597          
+ 598          /* Ð´Ò»¸ö×Ö½Ú                                         */
+ 599          /*******************************************************************/
+ 600           WriteOneChar(unsigned char dat)
+ 601          {
+ 602   1        unsigned char i = 0 ;
+ 603   1        for (i = 8 ; i > 0 ; i--)
+ 604   1        {
+ 605   2          DQ = 0 ;
+ 606   2          DQ = dat&0x01 ;
+ 607   2          Delay(5) ;
+ 608   2      
+ 609   2          DQ = 1 ;
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 11  
+
+ 610   2          dat>>=1 ;
+ 611   2        }
+ 612   1      }
+ 613          
+ 614          /* ¶ÁÈ¡ÎÂ¶È                            */
+ 615          /*******************************************************************/
+ 616           Read_Temperature(void)
+ 617          {
+ 618   1           Init_DS18B20() ;
+ 619   1      
+ 620   1           WriteOneChar(0xCC) ;  // Ìø¹ý¶ÁÐòºÅÁÐºÅµÄ²Ù×÷
+ 621   1           WriteOneChar(0x44) ;  // Æô¶¯ÎÂ¶È×ª»»
+ 622   1      
+ 623   1           Init_DS18B20() ;
+ 624   1           WriteOneChar(0xCC) ;  //Ìø¹ý¶ÁÐòºÅÁÐºÅµÄ²Ù×÷
+ 625   1           WriteOneChar(0xBE) ;  //¶ÁÈ¡ÎÂ¶È¼Ä´æÆ÷
+ 626   1      
+ 627   1           temp_data[0] = ReadOneChar() ;   //ÎÂ¶ÈµÍ8Î»
+ 628   1           temp_data[1] = ReadOneChar() ;   //ÎÂ¶È¸ß8Î»
+ 629   1      }
+ 630          
+ 631          /* Êý¾Ý×ª»»ÓëÎÂ¶ÈÏÔÊ¾                                              */
+ 632          /*******************************************************************/
+ 633           Disp_Temperature()
+ 634          {
+ 635   1        display[4]=temp_data[0]&0x0f ;
+ 636   1        display[0]=ditab[display[4]]+0x30 ;     //²é±íµÃÐ¡ÊýÎ»µÄÖµ
+ 637   1      
+ 638   1        display[4]=((temp_data[0]&0xf0)>>4)|((temp_data[1]&0x0f)<<4) ;
+ 639   1        display[3]=display[4]/100+0x30 ;
+ 640   1        display[1]=display[4]%100 ;
+ 641   1        display[2]=display[1]/10+0x30 ;
+ 642   1        display[1]=display[1]%10+0x30 ;
+ 643   1      
+ 644   1          if(display[3]==0x30)        //¸ßÎ»Îª0£¬²»ÏÔÊ¾
+ 645   1         {
+ 646   2           display[3]=0x20 ;
+ 647   2           if(display[2]==0x30)      //´Î¸ßÎ»Îª0£¬²»ÏÔÊ¾
+ 648   2           display[2]=0x20 ;
+ 649   2         }
+ 650   1      
+ 651   1           lcd_pos(0x48) ;
+ 652   1           lcd_wdat(display[3]) ;        //°ÙÎ»ÊýÏÔÊ¾
+ 653   1           lcd_pos(0x49) ;
+ 654   1           lcd_wdat(display[2]) ;        //Ê®Î»ÊýÏÔÊ¾
+ 655   1        lcd_pos(0x4a) ;
+ 656   1           lcd_wdat(display[1]) ;        //¸öÎ»ÊýÏÔÊ¾
+ 657   1        lcd_pos(0x4c) ;
+ 658   1           lcd_wdat(display[0]) ;        //Ð¡ÊýÎ»ÊýÏÔÊ¾
+ 659   1      }
+ 660          
+ 661          /*******************************************************************/
+ 662          /* ·äÃùÆ÷ÏìÒ»Éù                 */
+ 663          /*******************************************************************/
+ 664          void beep()
+ 665            {
+ 666   1          unsigned char y ;
+ 667   1          for (y=0 ;y<100 ;y++)
+ 668   1          {
+ 669   2            Delay(60) ;
+ 670   2            BEEP=!BEEP ;                //BEEPÈ¡·´
+ 671   2          }
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 12  
+
+ 672   1          BEEP=1 ;                      //¹Ø±Õ·äÃùÆ÷
+ 673   1       Delay(40000) ;
+ 674   1        }
+ 675          
+ 676          /* DS18B20 OK ÏÔÊ¾²Ëµ¥                                             */
+ 677          /*******************************************************************/
+ 678          void  Ok_Menu ()
+ 679          {
+ 680   1          uchar  m ;
+ 681   1          lcd_init() ;                //³õÊ¼»¯LCD
+ 682   1      
+ 683   1          lcd_pos(0) ;                //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚÒ»ÐÐµÄµÚ1¸ö×Ö·û
+ 684   1           m = 0 ;
+ 685   1          while(cdis1[m] != '\0')
+ 686   1           {                         //ÏÔÊ¾×Ö·û
+ 687   2             lcd_wdat(cdis1[m]) ;
+ 688   2             m++ ;
+ 689   2           }
+ 690   1      
+ 691   1          lcd_pos(0x40) ;             //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚ¶þÐÐµÚ1¸ö×Ö·û
+ 692   1           m = 0 ;
+ 693   1          while(cdis2[m] != '\0')
+ 694   1           {
+ 695   2             lcd_wdat(cdis2[m]) ;      //ÏÔÊ¾×Ö·û
+ 696   2             m++ ;
+ 697   2           }
+ 698   1      
+ 699   1           writetab() ;               //×Ô¶¨Òå×Ö·ûÐ´ÈëCGRAM
+ 700   1           delay1(5) ;
+ 701   1           lcd_pos(0x4d) ;
+ 702   1           lcd_wdat(0x00) ;          //ÏÔÊ¾×Ô¶¨Òå×Ö·û
+ 703   1      }
+ 704          
+ 705          
+ 706          /* DS18B20 ERROR ÏÔÊ¾²Ëµ¥                             */
+ 707          /*******************************************************************/
+ 708          void  Error_Menu ()
+ 709          {
+ 710   1           uchar  m ;
+ 711   1           lcd_init() ;                //³õÊ¼»¯LCD
+ 712   1      
+ 713   1          lcd_pos(0) ;                //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚÒ»ÐÐµÄµÚ1¸ö×Ö·û
+ 714   1           m = 0 ;
+ 715   1           while(cdis3[m] != '\0')
+ 716   1           {                         //ÏÔÊ¾×Ö·û
+ 717   2             lcd_wdat(cdis3[m]) ;
+ 718   2             m++ ;
+ 719   2           }
+ 720   1      
+ 721   1           lcd_pos(0x40) ;             //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚ¶þÐÐµÚ1¸ö×Ö·û
+ 722   1           m = 0 ;
+ 723   1           while(cdis4[m] != '\0')
+ 724   1           {
+ 725   2             lcd_wdat(cdis4[m]) ;      //ÏÔÊ¾×Ö·û
+ 726   2             m++ ;
+ 727   2           }
+ 728   1      }
+ 729          /********************************************************************************************************/
+ 730          void Self_BK_Define2(void){  
+ 731   1               uchar  m ;
+ 732   1          lcd_pos(0) ;                //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚÒ»ÐÐµÄµÚ1¸ö×Ö·û
+ 733   1           m = 0 ;
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 13  
+
+ 734   1          while(cdis1[m] != '\0')
+ 735   1           {                         //ÏÔÊ¾×Ö·û
+ 736   2             lcd_wdat(cdis1[m]) ;
+ 737   2             m++ ;
+ 738   2           }
+ 739   1      
+ 740   1          lcd_pos(0x40) ;             //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚ¶þÐÐµÚ1¸ö×Ö·û
+ 741   1           m = 0 ;
+ 742   1          while(cdis2[m] != '\0')
+ 743   1           {
+ 744   2             lcd_wdat(cdis2[m]) ;      //ÏÔÊ¾×Ö·û
+ 745   2             m++ ;
+ 746   2           }
+ 747   1      
+ 748   1           writetab() ;               //×Ô¶¨Òå×Ö·ûÐ´ÈëCGRAM
+ 749   1           delay1(5) ;
+ 750   1           lcd_pos(0x4d) ;
+ 751   1           lcd_wdat(0x00) ;          //ÏÔÊ¾×Ô¶¨Òå×Ö·û
+ 752   1      }
+ 753          
+ 754          
+ 755          
+ 756          void MainModel1(void){
+ 757   1       
+ 758   1      Self_BK_Define2();
+ 759   1      //System=0;
+ 760   1      //LED_Model1=1;
+ 761   1      //Bu_CloseDown=1;
+ 762   1      
+ 763   1       do
+ 764   1        {
+ 765   2            Read_Temperature() ;
+ 766   2                 Disp_Temperature() ;
+ 767   2                              
+ 768   2        if(display[2]>=51){for(BK_count=200;BK_count>0;BK_count--){
+ 769   4        
+ 770   4                                      BEEP=~BEEP;
+ 771   4                                      delay500();  
+ 772   4        }
+ 773   3                      for(BK_count=200;BK_count>0;BK_count--){
+ 774   4                      
+ 775   4                              BEEP=~BEEP;
+ 776   4                              delay500();
+ 777   4                              delay500();
+ 778   4                      }
+ 779   3          }   
+ 780   2              
+ 781   2      
+ 782   2      save_data_to_EEPROM();
+ 783   2                      
+ 784   2          if(((Menu_INT1)%2)==1)break;
+ 785   2           }
+ 786   1          while(!presence);
+ 787   1      
+ 788   1           Error_Menu();
+ 789   1      
+ 790   1       do
+ 791   1        {
+ 792   2          Init_DS18B20();
+ 793   2          beep();
+ 794   2                   if(((Menu_INT1)%2)==1)break;
+ 795   2           }
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 14  
+
+ 796   1       while(presence);
+ 797   1      /*System=1;
+ 798   1      LED_Model1=0;
+ 799   1      Bu_CloseDown=1;
+ 800   1      */ 
+ 801   1      //    if(((Menu_INT1)%2)==1)break;
+ 802   1      }
+ 803          
+ 804          void init(void){
+ 805   1        TMOD=0x01;
+ 806   1        TH0=0x4c;
+ 807   1        TL0=0x00;
+ 808   1         IT1=1;
+ 809   1              PX1=1;
+ 810   1        EX1=1;
+ 811   1              EA=1;
+ 812   1        ET0=1;
+ 813   1        TR0=1;
+ 814   1      }
+ 815          /* Ö÷º¯Êý     */
+ 816          /************************************/
+ 817          void main()
+ 818           {
+ 819   1           Ok_Menu () ;
+ 820   1                init();
+ 821   1      /**********************************¼ÓÈëµÄµÚ¶þ²¿·Ö****************************************/
+ 822   1      /****************************************************************************************/
+ 823   1      SCON=0x50;//´®¿Ú·½Ê½1£¬ÔÊÐí½ÓÊÕ
+ 824   1         TMOD=0x20;//¶¨Ê±Æ÷1£¬¶¨Ê±·½Ê½2
+ 825   1         TCON=0x40;//Éè¶¨Ê±Æ÷1¿ªÊ¼¼ÆÊý
+ 826   1         TH1=0xE8;//11.0592MHz, 1200²¨ÌØÂÊ
+ 827   1         TL1=0xE8;
+ 828   1         TI=1;
+ 829   1         TR1=1;
+ 830   1              IAP_CONTR = ENABLE_ISP; 
+ 831   1              EEPROM_erase(0x2000);
+ 832   1      EEPROM_IAP_Disable();
+ 833   1      /************¼ÓÈëµÄµÚ¶þ²¿·Ö½áÊø***********************************************************/
+ 834   1      while(1){ 
+ 835   2      if(((Menu_INT1)%2)==0){ MainModel1();}
+ 836   2      else    MainModel4();
+ 837   2      }
+ 838   1      
+ 839   1      }
+ 840          /*Íâ²¿ÖÐ¶Ï*/
+ 841          void int1_Menu_INT1() interrupt 2  
+ 842                  {
+ 843   1                      Menu_INT1++;
+ 844   1                      
+ 845   1                      if(Menu_INT1==8)Menu_INT1=0;
+ 846   1              
+ 847   1              }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1876    ----
+   CONSTANT SIZE    =    211    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     69      10
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2       1
+C51 COMPILER V7.00  EEPROMÊ__é___ò                                                         11/08/2009 17:16:16 PAGE 15  
+
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

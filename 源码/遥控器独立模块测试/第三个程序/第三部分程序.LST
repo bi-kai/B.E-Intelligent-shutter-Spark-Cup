@@ -1,0 +1,633 @@
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 1   
+
+
+C51 COMPILER V7.00, COMPILATION OF MODULE µ__ý_______ò
+OBJECT MODULE PLACED IN µÚÈý²¿·Ö³ÌÐò.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE µÚÈý²¿·Ö³ÌÐò.c BROWSE DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          /*ÔÚÔ­À´´¿µÚÈý²¿·Ö³ÌÐòÉÏ¼ÓÁËÁ½¸ö²¿·Ö£¬ÓÃÒÔÍê³ÉµÚÈýÄ£¿éµÄ²âÊÔ*/
+   2          #include<reg51.h>
+   3          #include<intrins.h>
+   4          
+   5          #define uchar unsigned char
+   6          #define uint  unsigned int
+   7          
+   8          
+   9          sbit PT2262_Data0=P1^0;
+  10          sbit PT2262_Data1=P1^1;
+  11          sbit PT2262_Data2=P1^2;
+  12          sbit PT2262_Data3=P1^5;
+  13          sbit PT2262_TE=P1^6;            /*Ä£Ê½ÈýÖÐÒªÖÃÎªÒ»*/
+  14          sbit System=P2^0;
+  15          sbit MoveUp=P2^1;
+  16          sbit MoveDown=P2^5;
+  17          sbit SelfAdd=P2^6;
+  18          sbit Bu_OpenUp=P3^0;
+  19          sbit Bu_CloseDown=P3^1;
+  20          sbit Bu_SlowlyUp=P3^4;
+  21          sbit Bu_SlowlyDown=P3^5;
+  22          sbit Bu_SetZero=P1^7;
+  23          sbit Bu_MoveUp=P3^6;
+  24          sbit Bu_MoveDown=P3^7;
+  25          sbit Bu_AllowSelfControl=P2^7;
+  26          
+  27          char key=0;
+  28          uchar Button_Command;
+  29          //sbit Button_Selfcontrol=P2^7;
+  30          
+  31          uchar code Function0[ ]={" Happy everyday "};
+  32          uchar code Function1[ ]={"    Open UP     "};
+  33          uchar code Function2[ ]={"   Close Down   "};
+  34          uchar code Function3[ ]={"   Slowly Up    "};
+  35          uchar code Function4[ ]={"   Slowly Down  "};
+  36          uchar code Function5[ ]={"  Wrong Command "};
+  37          uchar code Function6[ ]={"  Self Control  "};
+  38          uchar code Function7[ ]={"     Move Up    "};
+  39          uchar code Function8[ ]={"    Move Down   "};
+  40          uchar code Function9[ ]={"  Now,set zero  "};
+  41          uchar code Function10[ ]={"AllowSelfcontrol"};
+  42          
+  43          
+  44          void delay1(int ms)
+  45          {
+  46   1       uchar y;
+  47   1        while(ms--)
+  48   1       {
+  49   2        for(y = 0 ; y<250 ; y++)
+  50   2        {
+  51   3         _nop_();
+  52   3         _nop_();
+  53   3         _nop_();
+  54   3         _nop_();
+  55   3        }
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 2   
+
+  56   2       }
+  57   1      }
+  58          
+  59          
+  60          
+  61          /*********************************************************************************************/
+  62          /*ÖÐ¼äÎªlcd¼ÓÈë²¿·Ö³ÌÐò*//*¼ÓÈëµÄµÚÒ»²¿·Ö*/
+  63          /*********************************************************************************************/
+  64          sbit LCD_RS = P2^2 ;
+  65          sbit LCD_RW = P2^3 ;
+  66          sbit LCD_EN = P2^4 ;
+  67          
+  68          uchar code  cdis6[ ] = {"Position:model3."};
+  69          
+  70          #define delayNOP() ; {_nop_() ;_nop_() ;_nop_() ;_nop_() ;} ;
+  71          
+  72          /******************************************************************/
+  73          /*¼ì²éLCDÃ¦×´Ì¬                                                   */
+  74          /*lcd_busyÎª1Ê±£¬Ã¦£¬µÈ´ý¡£lcd-busyÎª0Ê±,ÏÐ£¬¿ÉÐ´Ö¸ÁîÓëÊý¾Ý¡£   */
+  75          /******************************************************************/
+  76          bit lcd_busy()
+  77           {
+  78   1          bit result ;
+  79   1          LCD_RS = 0 ;
+  80   1          LCD_RW = 1 ;
+  81   1          LCD_EN = 1 ;
+  82   1          delayNOP() ;
+  83   1          result = (bit)(P0&0x80) ;
+  84   1          LCD_EN = 0 ;
+  85   1          return(result) ;
+  86   1       }
+  87          
+  88          /*Ð´Ö¸ÁîÊý¾Ýµ½LCD                                                  */
+  89          /*RS=L£¬RW=L£¬E=¸ßÂö³å£¬D0-D7=Ö¸ÁîÂë¡£          */
+  90          /*******************************************************************/
+  91          void lcd_wcmd(uchar cmd)
+  92          {
+  93   1         while(lcd_busy()) ;
+  94   1          LCD_RS = 0 ;
+  95   1          LCD_RW = 0 ;
+  96   1          LCD_EN = 0 ;
+  97   1          _nop_() ;
+  98   1          _nop_() ;
+  99   1          P0 = cmd ;
+ 100   1          delayNOP() ;
+ 101   1          LCD_EN = 1 ;
+ 102   1          delayNOP() ;
+ 103   1          LCD_EN = 0 ;
+ 104   1      }
+ 105          
+ 106          /*******************************************************************/
+ 107          /*Ð´ÏÔÊ¾Êý¾Ýµ½LCD                            */
+ 108          /*RS=H£¬RW=L£¬E=¸ßÂö³å£¬D0-D7=Êý¾Ý¡£       */
+ 109          /*******************************************************************/
+ 110          void lcd_wdat(uchar dat)
+ 111          {
+ 112   1         while(lcd_busy()) ;
+ 113   1          LCD_RS = 1 ;
+ 114   1          LCD_RW = 0 ;
+ 115   1          LCD_EN = 0 ;
+ 116   1          P0 = dat ;
+ 117   1          delayNOP() ;
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 3   
+
+ 118   1          LCD_EN = 1 ;
+ 119   1          delayNOP() ;
+ 120   1          LCD_EN = 0 ;
+ 121   1      }
+ 122          
+ 123          
+ 124          /*  LCD³õÊ¼»¯Éè¶¨                                                  */
+ 125          /*******************************************************************/
+ 126          void lcd_init()
+ 127          {
+ 128   1          delay1(15) ;
+ 129   1          lcd_wcmd(0x01) ;      //Çå³ýLCDµÄÏÔÊ¾ÄÚÈÝ
+ 130   1          lcd_wcmd(0x38) ;      //16*2ÏÔÊ¾£¬5*7µãÕó£¬8Î»Êý¾Ý
+ 131   1          delay1(5) ;
+ 132   1          lcd_wcmd(0x38) ;
+ 133   1          delay1(5) ;
+ 134   1          lcd_wcmd(0x38) ;
+ 135   1          delay1(5) ;
+ 136   1      
+ 137   1          lcd_wcmd(0x0c) ;      //ÏÔÊ¾¿ª£¬¹Ø¹â±ê
+ 138   1          delay1(5) ;
+ 139   1          lcd_wcmd(0x06) ;      //ÒÆ¶¯¹â±ê
+ 140   1          delay1(5) ;
+ 141   1          lcd_wcmd(0x01) ;      //Çå³ýLCDµÄÏÔÊ¾ÄÚÈÝ
+ 142   1          delay1(5) ;
+ 143   1      }
+ 144          
+ 145          /*  Éè¶¨ÏÔÊ¾Î»ÖÃ                                    */
+ 146          /*******************************************************************/
+ 147          void lcd_pos(uchar pos)
+ 148          {
+ 149   1        lcd_wcmd(pos | 0x80) ;  //Êý¾ÝÖ¸Õë=80+µØÖ·±äÁ¿
+ 150   1      }
+ 151          /*********************************************************************************************/
+ 152          /*µÚÒ»²¿·Ö¼ÓÈë½áÊø*/
+ 153          
+ 154          /*
+ 155          uchar KeyScan(void){
+ 156          
+ 157                  System=0;MoveUp=1;MoveDown=1;SelfAdd=1;
+ 158          
+ 159                  if(MoveUp==0){
+ 160                          delay1(5);
+ 161                          if(MoveUp==0){
+ 162                                  System=1;
+ 163                                  if(MoveUp==0)key=6;
+ 164                                  else key=1;
+ 165                                  while(MoveUp==0);
+ 166                                  goto a;
+ 167                          }
+ 168                  }
+ 169          
+ 170          
+ 171                  if(MoveDown==0){
+ 172                  
+ 173                          delay1(5);
+ 174                          if(MoveDown==0){
+ 175                                  System=1;
+ 176                                  if(MoveDown==0)key=7;
+ 177                                  else key=2;
+ 178                                  while(MoveDown==0);
+ 179                                  goto a;
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 4   
+
+ 180                          }
+ 181                  }
+ 182          
+ 183          
+ 184            if(SelfAdd==0){
+ 185            
+ 186                   delay1(5);
+ 187                   if(SelfAdd==0){
+ 188                   System=1;
+ 189                   if(SelfAdd==0)key=8;
+ 190                   else key=3;
+ 191                   while(SelfAdd==0);
+ 192                   goto a;
+ 193                   }
+ 194            }
+ 195          
+ 196          
+ 197                  System=1;MoveUp=0;MoveDown=1;SelfAdd=1;  
+ 198          
+ 199                  if(MoveDown==0){
+ 200                  
+ 201                          delay1(5);
+ 202                          if(MoveDown==0){
+ 203                          MoveUp=1;
+ 204                          if(MoveDown==0)key=7;
+ 205                          else key=4;
+ 206                          while(MoveDown==0);
+ 207                          goto a;
+ 208                          }
+ 209                  }
+ 210          
+ 211          
+ 212          System=1;MoveUp=1;MoveDown=1;SelfAdd=1;  
+ 213          
+ 214                  if(System==0){
+ 215                  
+ 216                   delay1(5);
+ 217                   if(System==0)key=5;
+ 218                   while(System==0);
+ 219                   goto a;
+ 220                  }
+ 221          
+ 222          
+ 223          a:  return key;
+ 224          
+ 225          }*/
+ 226          /***********************************************************************************/
+ 227          
+ 228          /*****************¸ü¸ÄºóµÄKeyScan()***********************/
+ 229          
+ 230          uchar KeyScan(void){
+ 231   1      
+ 232   1      System=1;
+ 233   1      MoveUp=1;
+ 234   1      MoveDown=1;
+ 235   1      SelfAdd=1;
+ 236   1      Bu_OpenUp=1;
+ 237   1      Bu_CloseDown=1;
+ 238   1      Bu_SlowlyUp=1;
+ 239   1      Bu_SlowlyDown=1;
+ 240   1      Bu_MoveUp=1;
+ 241   1      Bu_MoveDown=1;
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 5   
+
+ 242   1      Bu_SetZero=1;
+ 243   1      Bu_AllowSelfControl=1;
+ 244   1      
+ 245   1      
+ 246   1      if((Bu_OpenUp==1)&&(Bu_CloseDown==1)&&(Bu_SlowlyUp==1)&&(Bu_SlowlyDown==1)&&(System==1)&&(MoveUp==1)&&(Mov
+             -eDown==1)&&(SelfAdd==1)&&(Bu_MoveUp==1)&&(Bu_MoveDown==1)&&(Bu_SetZero==1)&&(Bu_AllowSelfControl==1)){
+ 247   2      delay1(5);
+ 248   2      if((Bu_OpenUp==1)&&(Bu_CloseDown==1)&&(Bu_SlowlyUp==1)&&(Bu_SlowlyDown==1)&&(System==1)&&(MoveUp==1)&&(Mov
+             -eDown==1)&&(SelfAdd==1)&&(Bu_MoveUp==1)&&(Bu_MoveDown==1)&&(Bu_SetZero==1)&&(Bu_AllowSelfControl==1))
+ 249   2      key=0;
+ 250   2      }
+ 251   1      
+ 252   1      
+ 253   1      if(Bu_OpenUp==0){
+ 254   2      delay1(5);
+ 255   2      if(Bu_OpenUp==0)
+ 256   2      key=1;
+ 257   2      while(Bu_OpenUp==0);
+ 258   2      }
+ 259   1      
+ 260   1      
+ 261   1      if(Bu_CloseDown==0){
+ 262   2      delay1(5);
+ 263   2      if(Bu_CloseDown==0)
+ 264   2      key=2;
+ 265   2      while(Bu_CloseDown==0);
+ 266   2      }
+ 267   1      
+ 268   1      
+ 269   1      if(Bu_SlowlyUp==0){
+ 270   2      delay1(5);
+ 271   2      if(Bu_SlowlyUp==0)
+ 272   2      key=3;
+ 273   2      while(Bu_SlowlyUp==0);
+ 274   2      }
+ 275   1      
+ 276   1      
+ 277   1      if(Bu_SlowlyDown==0){
+ 278   2      delay1(5);
+ 279   2      if(Bu_SlowlyDown==0)
+ 280   2      key=4;
+ 281   2      while(Bu_SlowlyDown==0);
+ 282   2      }
+ 283   1      
+ 284   1      
+ 285   1      if(System==0){
+ 286   2      delay1(5);
+ 287   2      if(System==0)
+ 288   2      key=5;
+ 289   2      while(System==0);
+ 290   2      }
+ 291   1      
+ 292   1      
+ 293   1      if(MoveUp==0){
+ 294   2      delay1(5);
+ 295   2      if(MoveUp==0)
+ 296   2      key=6;
+ 297   2      while(MoveUp==0);
+ 298   2      }
+ 299   1      
+ 300   1      
+ 301   1      if(MoveDown==0){
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 6   
+
+ 302   2      delay1(5);
+ 303   2      if(MoveDown==0)
+ 304   2      key=7;
+ 305   2      while(MoveDown==0);
+ 306   2      }
+ 307   1      
+ 308   1      
+ 309   1      if(SelfAdd==0){
+ 310   2      delay1(5);
+ 311   2      if(SelfAdd==0)
+ 312   2      key=8;
+ 313   2      while(SelfAdd==0);
+ 314   2      }
+ 315   1      
+ 316   1      
+ 317   1      if(Bu_MoveUp==0){
+ 318   2      delay1(5);
+ 319   2      if(Bu_MoveUp==0)
+ 320   2      key=9;
+ 321   2      while(Bu_MoveUp==0);
+ 322   2      }
+ 323   1      
+ 324   1      
+ 325   1      if(Bu_MoveDown==0){
+ 326   2      delay1(5);
+ 327   2      if(Bu_MoveDown==0)
+ 328   2      key=10;
+ 329   2      while(Bu_MoveDown==0);
+ 330   2      }
+ 331   1      
+ 332   1      
+ 333   1      if(Bu_SetZero==0){
+ 334   2      delay1(5);
+ 335   2      if(Bu_SetZero==0)
+ 336   2      key=11;
+ 337   2      while(Bu_SetZero==0);
+ 338   2      }
+ 339   1      
+ 340   1      
+ 341   1      if(Bu_AllowSelfControl==0){
+ 342   2      delay1(5);
+ 343   2      if(Bu_AllowSelfControl==0)
+ 344   2      key=12;
+ 345   2      while(Bu_AllowSelfControl==0);
+ 346   2      }
+ 347   1      
+ 348   1      
+ 349   1      return key;
+ 350   1      }
+ 351          
+ 352          /**********************************************************************************/
+ 353          
+ 354          /*Ä£Ê½Èý£¬³õÊ¼»¯ÏÔÊ¾×Óº¯Êý*/
+ 355          /*********************************************************************************/
+ 356          
+ 357          void Self_BK_Define3(void){    //ÓÃÓÚÄ£Ê½Èý£¬ÏÔÊ¾°´¼ü²Ù×÷
+ 358   1      
+ 359   1              uchar  m ;
+ 360   1          lcd_pos(0) ;                //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚÒ»ÐÐµÄµÚ1¸ö×Ö·û
+ 361   1           m = 0 ;
+ 362   1          while(cdis6[m]!= '\0')
+ 363   1           {                         //ÏÔÊ¾×Ö·û
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 7   
+
+ 364   2             lcd_wdat(cdis6[m]) ;
+ 365   2             m++ ;
+ 366   2           }
+ 367   1      
+ 368   1          lcd_pos(0x40) ;             //ÉèÖÃÏÔÊ¾Î»ÖÃÎªµÚ¶þÐÐµÚ1¸ö×Ö·û
+ 369   1           m = 0 ;
+ 370   1          while(Function0[m] != '\0')
+ 371   1           {
+ 372   2             lcd_wdat(Function0[m]) ;      //ÏÔÊ¾×Ö·û
+ 373   2             m++ ;
+ 374   2           }
+ 375   1      }
+ 376          
+ 377          
+ 378          /******************************************************************************/
+ 379          
+ 380          void MainModel3(void){
+ 381   1              uchar n;
+ 382   1              Self_BK_Define3();
+ 383   1              delay1(1000);
+ 384   1              PT2262_Data0=1;PT2262_Data1=1;PT2262_Data2=1;PT2262_Data3=1;
+ 385   1      while(1){
+ 386   2      
+ 387   2      //  Self_BK_Define3();
+ 388   2              Button_Command=KeyScan();
+ 389   2                      PT2262_TE=0;
+ 390   2              if(Button_Command==0){//PT2262_Data0=1;PT2262_Data1=1;PT2262_Data2=1;PT2262_Data3=1;
+ 391   3                      
+ 392   3              lcd_pos(0x40);
+ 393   3              n=0;
+ 394   3              while(Function6[n]!='\0'){
+ 395   4              lcd_wdat(Function6[n]);
+ 396   4                              n++;
+ 397   4                              }
+ 398   3      }       
+ 399   2      
+ 400   2      else if(Button_Command==1){PT2262_Data0=1;PT2262_Data1=1;PT2262_Data2=1;PT2262_Data3=0;
+ 401   3                      
+ 402   3              lcd_pos(0x40);
+ 403   3              n=0;
+ 404   3              while(Function1[n]!='\0'){
+ 405   4              lcd_wdat(Function1[n]);
+ 406   4                              n++;
+ 407   4                              }
+ 408   3      }       
+ 409   2      
+ 410   2      else if(Button_Command==2){PT2262_Data0=0;PT2262_Data1=1;PT2262_Data2=1;PT2262_Data3=0;
+ 411   3                      
+ 412   3              lcd_pos(0x40);
+ 413   3              n=0;
+ 414   3              while(Function2[n]!='\0'){
+ 415   4              lcd_wdat(Function2[n]);
+ 416   4                              n++;
+ 417   4                              }
+ 418   3      }       
+ 419   2      
+ 420   2      
+ 421   2      else if(Button_Command==3){PT2262_Data0=1;PT2262_Data1=1;PT2262_Data2=0;PT2262_Data3=0;
+ 422   3                      
+ 423   3              lcd_pos(0x40);
+ 424   3              n=0;
+ 425   3              while(Function3[n]!='\0'){
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 8   
+
+ 426   4              lcd_wdat(Function3[n]);
+ 427   4                              n++;
+ 428   4                              }
+ 429   3      }       
+ 430   2      
+ 431   2      
+ 432   2      else if(Button_Command==4){PT2262_Data0=0;PT2262_Data1=1;PT2262_Data2=0;PT2262_Data3=0;
+ 433   3                      
+ 434   3              lcd_pos(0x40);
+ 435   3              n=0;
+ 436   3              while(Function4[n]!='\0'){
+ 437   4              lcd_wdat(Function4[n]);
+ 438   4                              n++;
+ 439   4                              }
+ 440   3      }       
+ 441   2      
+ 442   2      
+ 443   2      else if(Button_Command==9){PT2262_Data0=1;PT2262_Data1=0;PT2262_Data2=0;PT2262_Data3=0;
+ 444   3                      
+ 445   3              lcd_pos(0x40);
+ 446   3              n=0;
+ 447   3              while(Function7[n]!='\0'){
+ 448   4              lcd_wdat(Function7[n]);
+ 449   4                              n++;
+ 450   4                              }
+ 451   3      }       
+ 452   2      
+ 453   2      
+ 454   2      else if(Button_Command==10){PT2262_Data0=0;PT2262_Data1=0;PT2262_Data2=1;PT2262_Data3=0;
+ 455   3                      
+ 456   3              lcd_pos(0x40);
+ 457   3              n=0;
+ 458   3              while(Function8[n]!='\0'){
+ 459   4              lcd_wdat(Function8[n]);
+ 460   4                              n++;
+ 461   4                              }
+ 462   3      }
+ 463   2      
+ 464   2      
+ 465   2      else if(Button_Command==11){PT2262_Data0=0;PT2262_Data1=0;PT2262_Data2=0;PT2262_Data3=0;
+ 466   3                      
+ 467   3              lcd_pos(0x40);
+ 468   3              n=0;
+ 469   3              while(Function9[n]!='\0'){
+ 470   4              lcd_wdat(Function9[n]);
+ 471   4                              n++;
+ 472   4                              }
+ 473   3      }
+ 474   2      
+ 475   2      
+ 476   2      else if(Button_Command==12){PT2262_Data0=0;PT2262_Data1=0;PT2262_Data2=0;PT2262_Data3=1;
+ 477   3                      
+ 478   3              lcd_pos(0x40);
+ 479   3              n=0;
+ 480   3              while(Function10[n]!='\0'){
+ 481   4              lcd_wdat(Function10[n]);
+ 482   4                              n++;
+ 483   4                              }
+ 484   3      }
+ 485   2      
+ 486   2      
+ 487   2      
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 9   
+
+ 488   2      else {//PT2262_Data0=0;PT2262_Data1=0;PT2262_Data2=0;PT2262_Data3=0;
+ 489   3                      
+ 490   3              lcd_pos(0x40);
+ 491   3              n=0;
+ 492   3              while(Function5[n]!='\0'){
+ 493   4              lcd_wdat(Function5[n]);
+ 494   4                              n++;
+ 495   4                              }
+ 496   3      }       
+ 497   2      delay1(300);
+ 498   2      PT2262_TE=1;
+ 499   2      }
+ 500   1      }//Ä£¿é3×îºóÒ»ÐÐ
+ 501          
+ 502          
+ 503          
+ 504          
+ 505          /*********************************************************************************/
+ 506          /*µÚ¶þ¿éÌí¼ÓµÄ²¿·Ö*/
+ 507          
+ 508          void main(void){
+ 509   1              lcd_init();
+ 510   1              while(1){
+ 511   2              MainModel3();
+ 512   2              }
+ 513   1      }
+ 514          /*********************************************************************************/
+ 515          
+ 516          
+ 517          
+ 518          
+ 519          
+ 520          
+ 521          
+ 522          
+ 523          
+ 524          
+ 525          
+ 526          
+ 527          
+ 528          
+ 529          
+ 530          
+ 531          
+ 532          
+ 533          
+ 534          
+ 535          
+ 536          
+ 537          
+ 538          
+ 539          
+ 540          
+ 541          
+ 542          
+ 543          
+ 544          
+ 545          
+ 546          
+ 547          
+ 548          
+ 549          
+C51 COMPILER V7.00  µ__ý_______ò                                                           10/21/2009 18:54:19 PAGE 10  
+
+ 550          
+ 551          
+ 552          
+ 553          
+ 554          
+ 555          
+ 556          
+ 557          
+ 558          
+ 559          
+ 560          
+ 561          
+ 562          
+ 563          
+ 564          
+ 565          
+ 566          
+ 567          
+ 568          
+ 569          
+ 570          
+ 571          
+ 572          
+ 573          
+ 574          
+ 575          
+ 576          
+ 577          
+ 578          
+ 579          
+ 580          
+ 581          
+ 582          
+ 583          
+ 584          
+ 585          
+ 586          
+ 587          
+ 588          
+ 589          
+ 590          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    853    ----
+   CONSTANT SIZE    =    204    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      2    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

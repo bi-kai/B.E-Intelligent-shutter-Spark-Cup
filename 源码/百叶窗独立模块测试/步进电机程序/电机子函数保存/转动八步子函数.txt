@@ -1,0 +1,49 @@
+void Motor_CompSlowlyDown(){
+
+	char i,j;
+	speedlevel=2;
+	spcount=0;
+	step_index=7;
+	for(i=0;i<=7;i++){
+		for(j=0;j<=15;j++){
+			HadBeenDone=0;
+			TH0=0xFE;
+			TL0=0x0c;
+			TR0=1;
+			delay(2);
+			if(HadBeenDone==1){
+			if(spcount<=0){
+				spcount=speedlevel;
+			if(stop_flag==1){P1_0=0;P1_1=0;P1_2=0;P1_3=0;TR0=0;return;}
+			switch(step_index){
+			case 0:
+			P1_0=1;P1_1=0;P1_2=0;P1_3=0;break;
+			case 1:
+			P1_0=1;P1_1=1;P1_2=0;P1_3=0;break;
+			case 2:
+			P1_0=0;P1_1=1;P1_2=0;P1_3=0;break;
+			case 3:
+			P1_0=0;P1_1=1;P1_2=1;P1_3=0;break;
+			case 4:
+			P1_0=0;P1_1=0;P1_2=1;P1_3=0;break;
+			case 5:
+			P1_0=0;P1_1=0;P1_2=1;P1_3=1;break;
+			case 6:
+			P1_0=0;P1_1=0;P1_2=0;P1_3=1;break;
+			case 7:
+			P1_0=1;P1_1=0;P1_2=0;P1_3=1;break;
+			}
+	step_index--;
+	if(step_index<0)step_index=7;
+}
+
+
+}
+else delay(1);
+
+}
+Motor_StepCounter++;
+}
+TR0=0;
+
+}

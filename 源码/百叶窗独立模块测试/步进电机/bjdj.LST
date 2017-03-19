@@ -1,0 +1,175 @@
+C51 COMPILER V7.00  BJDJ                                                                   10/14/2009 22:05:11 PAGE 1   
+
+
+C51 COMPILER V7.00, COMPILATION OF MODULE BJDJ
+OBJECT MODULE PLACED IN bjdj.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE bjdj.c BROWSE DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          #include <reg51.h> 
+   2          sbit P1_0=P1^0;
+   3          sbit P1_1=P1^1;
+   4          sbit P1_2=P1^2;
+   5          sbit P1_3=P1^3;
+   6          
+   7          static unsigned int count; //计数
+   8          static int step_index; //步进索引数，值为0－7
+   9          
+  10          static bit turn; //步进电机转动方向
+  11          static bit stop_flag; //步进电机停止标志
+  12          static int speedlevel; //步进电机转速参数，数值越大速度越慢，最小值为1，速度最快
+  13          static int spcount;    //步进电机转速参数计数
+  14          void delay(unsigned int endcount); //延时函数，延时为endcount*0.5毫秒
+  15          void gorun();          //步进电机控制步进函数
+  16          
+  17          void main(void) 
+  18          {
+  19   1      count = 0;
+  20   1      step_index = 0;
+  21   1      spcount = 0;
+  22   1      stop_flag = 0;
+  23   1      
+  24   1      P1_0 = 0;
+  25   1      P1_1 = 0;
+  26   1      P1_2 = 0;
+  27   1      P1_3 = 0;
+  28   1      
+  29   1      EA = 1;            //允许CPU中断 
+  30   1      TMOD = 0x11; //设定时器0和1为16位模式1 
+  31   1      ET0 = 1;           //定时器0中断允许 
+  32   1      
+  33   1      TH0 = 0xFE;
+  34   1      TL0 = 0x2C;   //设定时每隔0.5ms中断一次
+  35   1      TR0 = 1;         //开始计数
+  36   1      
+  37   1      turn = 0;
+  38   1      
+  39   1      speedlevel = 2;
+  40   1      delay(10000);
+  41   1      speedlevel = 1;
+  42   1      do{
+  43   2          speedlevel = 2;
+  44   2          delay(10000);
+  45   2         
+  46   2      }while(1);
+  47   1      
+  48   1      } 
+  49          
+  50          //定时器0中断处理 
+  51          void timeint(void) interrupt 1 
+  52          { 
+  53   1      TH0=0xFE;
+  54   1      TL0=0x2C; //设定时每隔0.5ms中断一次
+  55   1      
+C51 COMPILER V7.00  BJDJ                                                                   10/14/2009 22:05:11 PAGE 2   
+
+  56   1      count++;
+  57   1      
+  58   1      spcount--;
+  59   1      if(spcount<=0)
+  60   1      {
+  61   2          spcount = speedlevel;
+  62   2          gorun();
+  63   2      }
+  64   1      
+  65   1      }
+  66          
+  67          void delay(unsigned int endcount)
+  68          {
+  69   1      count=0;
+  70   1      do{}while(count<endcount);
+  71   1      }
+  72          
+  73          void gorun()
+  74          {
+  75   1      if (stop_flag==1)
+  76   1      {
+  77   2          P1_0 = 0;
+  78   2          P1_1 = 0;
+  79   2          P1_2 = 0;
+  80   2          P1_3 = 0;
+  81   2          return;
+  82   2      }
+  83   1      
+  84   1      switch(step_index)
+  85   1      {
+  86   2      case 0: //0
+  87   2          P1_0 = 1;
+  88   2          P1_1 = 0;
+  89   2          P1_2 = 0;
+  90   2          P1_3 = 0;
+  91   2          break;
+  92   2      case 1: //0、1
+  93   2          P1_0 = 1;
+  94   2          P1_1 = 1;
+  95   2          P1_2 = 0;
+  96   2          P1_3 = 0;
+  97   2          break;
+  98   2      case 2: //1
+  99   2          P1_0 = 0;
+ 100   2          P1_1 = 1;
+ 101   2          P1_2 = 0;
+ 102   2          P1_3 = 0;
+ 103   2          break;
+ 104   2      case 3: //1、2
+ 105   2          P1_0 = 0;
+ 106   2          P1_1 = 1;
+ 107   2          P1_2 = 1;
+ 108   2          P1_3 = 0;
+ 109   2          break;
+ 110   2      case 4: //2
+ 111   2          P1_0 = 0;
+ 112   2          P1_1 = 0;
+ 113   2          P1_2 = 1;
+ 114   2          P1_3 = 0;
+ 115   2          break;
+ 116   2      case 5: //2、3
+ 117   2          P1_0 = 0;
+C51 COMPILER V7.00  BJDJ                                                                   10/14/2009 22:05:11 PAGE 3   
+
+ 118   2          P1_1 = 0;
+ 119   2          P1_2 = 1;
+ 120   2          P1_3 = 1;
+ 121   2          break;
+ 122   2      case 6: //3
+ 123   2          P1_0 = 0;
+ 124   2          P1_1 = 0;
+ 125   2          P1_2 = 0;
+ 126   2          P1_3 = 1;
+ 127   2          break;
+ 128   2      case 7: //3、0
+ 129   2          P1_0 = 1;
+ 130   2          P1_1 = 0;
+ 131   2          P1_2 = 0;
+ 132   2          P1_3 = 1;
+ 133   2      }
+ 134   1      
+ 135   1      if (turn==0)
+ 136   1      {
+ 137   2          step_index++;
+ 138   2          if (step_index>7)
+ 139   2            step_index=0;
+ 140   2      }
+ 141   1      else
+ 142   1      {
+ 143   2          step_index--;
+ 144   2          if (step_index<0)
+ 145   2            step_index=7;
+ 146   2      }
+ 147   1          
+ 148   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    347    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      8    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,434 @@
+C51 COMPILER V7.08   16021602                                                              09/08/2008 21:48:17 PAGE 1   
+
+
+C51 COMPILER V7.08, COMPILATION OF MODULE 16021602
+OBJECT MODULE PLACED IN D:\自己三代\第三代光盘资料\开发板示例程序\18B20+1602LCD温度实验（C语言）\16021602.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE D:\自己三代\第三代光盘资料\开发板示例程序\18B20+1602LCD温度实验（C语言）\16
+                    -021602.C DB SB OE
+
+line level    source
+
+   1          
+   2          
+   3          #include < reg51.h >
+   4          #include < intrins.h >
+   5          
+   6          #define uchar unsigned char
+   7          #define uint  unsigned int
+   8          
+   9          sbit DQ = P1^2 ;  //定义DS18B20端口DQ
+  10          sbit BEEP=P1^3  ; //蜂鸣器驱动线
+  11          
+  12          bit presence  ;
+  13          
+  14          sbit LCD_RS = P2^2 ;
+  15          sbit LCD_RW = P2^3 ;
+  16          sbit LCD_EN = P2^4 ;
+  17          
+  18          uchar code  cdis1[ ] = {" welcome to JLDZ "} ;//嘉乐电子缩写
+  19          uchar code  cdis2[ ] = {" WENDU:    .  C "} ;
+  20          uchar code  cdis3[ ] = {" DS18B20  ERR0R "} ;
+  21          uchar code  cdis4[ ] = {"  PLEASE CHECK  "} ;
+  22          
+  23          unsigned char data  temp_data[2] = {0x00,0x00} ;
+  24          unsigned char data  display[5] =   {0x00,0x00,0x00,0x00,0x00} ;
+  25          unsigned char code  ditab[16] =    {0x00,0x01,0x01,0x02,0x03,0x03,0x04,0x04,
+  26                                                                  0x05,0x06,0x06,0x07,0x08,0x08,0x09,0x09} ;
+  27          void beep() ;
+  28          unsigned char code  mytab[8] = {0x0C,0x12,0x12,0x0C,0x00,0x00,0x00,0x00} ;
+  29          
+  30          #define delayNOP() ; {_nop_() ;_nop_() ;_nop_() ;_nop_() ;} ;
+  31          
+  32          /*******************************************************************/
+  33          void delay1(int ms)
+  34          {
+  35   1       unsigned char y ;
+  36   1        while(ms--)
+  37   1       {
+  38   2        for(y = 0 ; y<250 ; y++)
+  39   2        {
+  40   3         _nop_() ;
+  41   3         _nop_() ;
+  42   3         _nop_() ;
+  43   3         _nop_() ;
+  44   3        }
+  45   2       }
+  46   1      }
+  47          
+  48          /******************************************************************/
+  49          /*检查LCD忙状态                                                   */
+  50          /*lcd_busy为1时，忙，等待。lcd-busy为0时,闲，可写指令与数据。   */
+  51          /******************************************************************/
+  52          bit lcd_busy()
+  53           {
+  54   1          bit result ;
+C51 COMPILER V7.08   16021602                                                              09/08/2008 21:48:17 PAGE 2   
+
+  55   1          LCD_RS = 0 ;
+  56   1          LCD_RW = 1 ;
+  57   1          LCD_EN = 1 ;
+  58   1          delayNOP() ;
+  59   1          result = (bit)(P0&0x80) ;
+  60   1          LCD_EN = 0 ;
+  61   1          return(result) ;
+  62   1       }
+  63          
+  64          /*写指令数据到LCD                                                  */
+  65          /*RS=L，RW=L，E=高脉冲，D0-D7=指令码。          */
+  66          /*******************************************************************/
+  67          void lcd_wcmd(uchar cmd)
+  68          {
+  69   1         while(lcd_busy()) ;
+  70   1          LCD_RS = 0 ;
+  71   1          LCD_RW = 0 ;
+  72   1          LCD_EN = 0 ;
+  73   1          _nop_() ;
+  74   1          _nop_() ;
+  75   1          P0 = cmd ;
+  76   1          delayNOP() ;
+  77   1          LCD_EN = 1 ;
+  78   1          delayNOP() ;
+  79   1          LCD_EN = 0 ;
+  80   1      }
+  81          
+  82          /*******************************************************************/
+  83          /*写显示数据到LCD                            */
+  84          /*RS=H，RW=L，E=高脉冲，D0-D7=数据。       */
+  85          /*******************************************************************/
+  86          void lcd_wdat(uchar dat)
+  87          {
+  88   1         while(lcd_busy()) ;
+  89   1          LCD_RS = 1 ;
+  90   1          LCD_RW = 0 ;
+  91   1          LCD_EN = 0 ;
+  92   1          P0 = dat ;
+  93   1          delayNOP() ;
+  94   1          LCD_EN = 1 ;
+  95   1          delayNOP() ;
+  96   1          LCD_EN = 0 ;
+  97   1      }
+  98          
+  99          
+ 100          /*  LCD初始化设定                                                  */
+ 101          /*******************************************************************/
+ 102          void lcd_init()
+ 103          {
+ 104   1          delay1(15) ;
+ 105   1          lcd_wcmd(0x01) ;      //清除LCD的显示内容
+ 106   1          lcd_wcmd(0x38) ;      //16*2显示，5*7点阵，8位数据
+ 107   1          delay1(5) ;
+ 108   1          lcd_wcmd(0x38) ;
+ 109   1          delay1(5) ;
+ 110   1          lcd_wcmd(0x38) ;
+ 111   1          delay1(5) ;
+ 112   1      
+ 113   1          lcd_wcmd(0x0c) ;      //显示开，关光标
+ 114   1          delay1(5) ;
+ 115   1          lcd_wcmd(0x06) ;      //移动光标
+ 116   1          delay1(5) ;
+C51 COMPILER V7.08   16021602                                                              09/08/2008 21:48:17 PAGE 3   
+
+ 117   1          lcd_wcmd(0x01) ;      //清除LCD的显示内容
+ 118   1          delay1(5) ;
+ 119   1      }
+ 120          
+ 121          /*  设定显示位置                                    */
+ 122          /*******************************************************************/
+ 123          void lcd_pos(uchar pos)
+ 124          {
+ 125   1        lcd_wcmd(pos | 0x80) ;  //数据指针=80+地址变量
+ 126   1      }
+ 127          
+ 128          /*自定义字符写入CGRAM                                   */
+ 129          /*******************************************************************/
+ 130          void  writetab()
+ 131          {
+ 132   1          unsigned char i ;
+ 133   1          lcd_wcmd(0x40) ;            //写CGRAM
+ 134   1          for (i = 0 ; i< 8 ; i++)
+ 135   1          lcd_wdat(mytab[ i ]) ;
+ 136   1      }
+ 137          
+ 138          /*us级延时函数                                        */
+ 139          /*******************************************************************/
+ 140          
+ 141          void Delay(unsigned int num)
+ 142          {
+ 143   1        while( --num ) ;
+ 144   1      }
+ 145          
+ 146          /*初始化ds1820                                      */
+ 147          /*******************************************************************/
+ 148          Init_DS18B20(void)
+ 149          {
+ 150   1           DQ = 1 ;      //DQ复位
+ 151   1           Delay(8) ;    //稍做延时
+ 152   1      
+ 153   1           DQ = 0 ;      //单片机将DQ拉低
+ 154   1           Delay(90) ;   //精确延时 大于 480us
+ 155   1      
+ 156   1           DQ = 1 ;       //拉高总线
+ 157   1           Delay(8) ;
+ 158   1      
+ 159   1           presence = DQ ;    //如果=0则初始化成功 =1则初始化失败
+ 160   1           Delay(100) ;
+ 161   1           DQ = 1 ;
+ 162   1      
+ 163   1           return(presence) ; //返回信号，0=presence,1= no presence
+ 164   1      }
+ 165          
+ 166          
+ 167          /* 读一个字节                     */
+ 168          /*******************************************************************/
+ 169           ReadOneChar(void)
+ 170          {
+ 171   1      unsigned char i = 0 ;
+ 172   1      unsigned char dat = 0 ;
+ 173   1      
+ 174   1      for (i = 8 ; i > 0 ; i--)
+ 175   1        {
+ 176   2          DQ = 0 ; // 给脉冲信号
+ 177   2          dat >>= 1 ;
+ 178   2          DQ = 1 ; // 给脉冲信号
+C51 COMPILER V7.08   16021602                                                              09/08/2008 21:48:17 PAGE 4   
+
+ 179   2      
+ 180   2          if(DQ)
+ 181   2           dat |= 0x80 ;
+ 182   2          Delay(4) ;
+ 183   2        }
+ 184   1      
+ 185   1          return (dat) ;
+ 186   1      }
+ 187          
+ 188          /* 写一个字节                                         */
+ 189          /*******************************************************************/
+ 190           WriteOneChar(unsigned char dat)
+ 191          {
+ 192   1        unsigned char i = 0 ;
+ 193   1        for (i = 8 ; i > 0 ; i--)
+ 194   1        {
+ 195   2          DQ = 0 ;
+ 196   2          DQ = dat&0x01 ;
+ 197   2          Delay(5) ;
+ 198   2      
+ 199   2          DQ = 1 ;
+ 200   2          dat>>=1 ;
+ 201   2        }
+ 202   1      }
+ 203          
+ 204          /* 读取温度                            */
+ 205          /*******************************************************************/
+ 206           Read_Temperature(void)
+ 207          {
+ 208   1           Init_DS18B20() ;
+ 209   1      
+ 210   1           WriteOneChar(0xCC) ;  // 跳过读序号列号的操作
+ 211   1           WriteOneChar(0x44) ;  // 启动温度转换
+ 212   1      
+ 213   1           Init_DS18B20() ;
+ 214   1           WriteOneChar(0xCC) ;  //跳过读序号列号的操作
+ 215   1           WriteOneChar(0xBE) ;  //读取温度寄存器
+ 216   1      
+ 217   1           temp_data[0] = ReadOneChar() ;   //温度低8位
+ 218   1           temp_data[1] = ReadOneChar() ;   //温度高8位
+ 219   1      }
+ 220          
+ 221          /* 数据转换与温度显示                                              */
+ 222          /*******************************************************************/
+ 223           Disp_Temperature()
+ 224          {
+ 225   1        display[4]=temp_data[0]&0x0f ;
+ 226   1        display[0]=ditab[display[4]]+0x30 ;     //查表得小数位的值
+ 227   1      
+ 228   1        display[4]=((temp_data[0]&0xf0)>>4)|((temp_data[1]&0x0f)<<4) ;
+ 229   1        display[3]=display[4]/100+0x30 ;
+ 230   1        display[1]=display[4]%100 ;
+ 231   1        display[2]=display[1]/10+0x30 ;
+ 232   1        display[1]=display[1]%10+0x30 ;
+ 233   1      
+ 234   1          if(display[3]==0x30)        //高位为0，不显示
+ 235   1         {
+ 236   2           display[3]=0x20 ;
+ 237   2           if(display[2]==0x30)      //次高位为0，不显示
+ 238   2           display[2]=0x20 ;
+ 239   2         }
+ 240   1      
+C51 COMPILER V7.08   16021602                                                              09/08/2008 21:48:17 PAGE 5   
+
+ 241   1           lcd_pos(0x48) ;
+ 242   1           lcd_wdat(display[3]) ;        //百位数显示
+ 243   1           lcd_pos(0x49) ;
+ 244   1           lcd_wdat(display[2]) ;        //十位数显示
+ 245   1        lcd_pos(0x4a) ;
+ 246   1           lcd_wdat(display[1]) ;        //个位数显示
+ 247   1        lcd_pos(0x4c) ;
+ 248   1           lcd_wdat(display[0]) ;        //小数位数显示
+ 249   1      }
+ 250          
+ 251          /*******************************************************************/
+ 252          /* 蜂鸣器响一声                 */
+ 253          /*******************************************************************/
+ 254          void beep()
+ 255            {
+ 256   1          unsigned char y ;
+ 257   1          for (y=0 ;y<100 ;y++)
+ 258   1          {
+ 259   2            Delay(60) ;
+ 260   2            BEEP=!BEEP ;                //BEEP取反
+ 261   2          }
+ 262   1          BEEP=1 ;                      //关闭蜂鸣器
+ 263   1       Delay(40000) ;
+ 264   1        }
+ 265          
+ 266          /* DS18B20 OK 显示菜单                                             */
+ 267          /*******************************************************************/
+ 268          void  Ok_Menu ()
+ 269          {
+ 270   1          uchar  m ;
+ 271   1          lcd_init() ;                //初始化LCD
+ 272   1      
+ 273   1          lcd_pos(0) ;                //设置显示位置为第一行的第1个字符
+ 274   1           m = 0 ;
+ 275   1          while(cdis1[m] != '\0')
+ 276   1           {                         //显示字符
+ 277   2             lcd_wdat(cdis1[m]) ;
+ 278   2             m++ ;
+ 279   2           }
+ 280   1      
+ 281   1          lcd_pos(0x40) ;             //设置显示位置为第二行第1个字符
+ 282   1           m = 0 ;
+ 283   1          while(cdis2[m] != '\0')
+ 284   1           {
+ 285   2             lcd_wdat(cdis2[m]) ;      //显示字符
+ 286   2             m++ ;
+ 287   2           }
+ 288   1      
+ 289   1           writetab() ;               //自定义字符写入CGRAM
+ 290   1           delay1(5) ;
+ 291   1           lcd_pos(0x4d) ;
+ 292   1           lcd_wdat(0x00) ;          //显示自定义字符
+ 293   1      }
+ 294          
+ 295          
+ 296          /* DS18B20 ERROR 显示菜单                             */
+ 297          /*******************************************************************/
+ 298          void  Error_Menu ()
+ 299          {
+ 300   1           uchar  m ;
+ 301   1           lcd_init() ;                //初始化LCD
+ 302   1      
+C51 COMPILER V7.08   16021602                                                              09/08/2008 21:48:17 PAGE 6   
+
+ 303   1          lcd_pos(0) ;                //设置显示位置为第一行的第1个字符
+ 304   1           m = 0 ;
+ 305   1           while(cdis3[m] != '\0')
+ 306   1           {                         //显示字符
+ 307   2             lcd_wdat(cdis3[m]) ;
+ 308   2             m++ ;
+ 309   2           }
+ 310   1      
+ 311   1           lcd_pos(0x40) ;             //设置显示位置为第二行第1个字符
+ 312   1           m = 0 ;
+ 313   1           while(cdis4[m] != '\0')
+ 314   1           {
+ 315   2             lcd_wdat(cdis4[m]) ;      //显示字符
+ 316   2             m++ ;
+ 317   2           }
+ 318   1      }
+ 319          
+ 320          
+ 321          /* 主函数     */
+ 322          /************************************/
+ 323          void main()
+ 324           {
+ 325   1           Ok_Menu () ;
+ 326   1      
+ 327   1       do
+ 328   1        {
+ 329   2            Read_Temperature() ;
+ 330   2         Disp_Temperature() ;
+ 331   2           }
+ 332   1          while(!presence)  ;
+ 333   1      
+ 334   1           Error_Menu () ;
+ 335   1      
+ 336   1       do
+ 337   1        {
+ 338   2          Init_DS18B20() ;
+ 339   2          beep() ;
+ 340   2           }
+ 341   1       while(presence) ;
+ 342   1      }
+ 343          
+C51 COMPILER V7.08   16021602                                                              09/08/2008 21:48:17 PAGE 7   
+
+NAME                                    CLASS   MSPACE  TYPE    OFFSET  SIZE
+====                                    =====   ======  ====    ======  ====
+
+
+P0 . . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   0080H  1
+P1 . . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   0090H  1
+P2 . . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   00A0H  1
+Error_Menu . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  m. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0006H  1
+ditab. . . . . . . . . . . . . . . . .  PUBLIC   CODE   ARRAY    0045H  16
+Disp_Temperature . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+_WriteOneChar. . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  dat. . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0005H  1
+  i. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0003H  1
+DQ . . . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      0092H  1
+Init_DS18B20 . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+BEEP . . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      0093H  1
+beep . . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  y. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0005H  1
+mytab. . . . . . . . . . . . . . . . .  PUBLIC   CODE   ARRAY    0055H  8
+_lcd_wcmd. . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0007H  -----
+  cmd. . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+ReadOneChar. . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  i. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0005H  1
+  dat. . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0004H  1
+_delay1. . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0004H  -----
+  ms . . . . . . . . . . . . . . . . .  * REG *  DATA   INT      0006H  2
+  y. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0005H  1
+main . . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+_lcd_wdat. . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  dat. . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+Ok_Menu. . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  m. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0006H  1
+temp_data. . . . . . . . . . . . . . .  PUBLIC   DATA   ARRAY    0000H  2
+LCD_EN . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      00A4H  1
+_lcd_pos . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  pos. . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+lcd_init . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+_Delay . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0006H  -----
+  num. . . . . . . . . . . . . . . . .  * REG *  DATA   U_INT    0006H  2
+cdis1. . . . . . . . . . . . . . . . .  PUBLIC   CODE   ARRAY    0000H  18
+cdis2. . . . . . . . . . . . . . . . .  PUBLIC   CODE   ARRAY    0012H  17
+cdis3. . . . . . . . . . . . . . . . .  PUBLIC   CODE   ARRAY    0023H  17
+cdis4. . . . . . . . . . . . . . . . .  PUBLIC   CODE   ARRAY    0034H  17
+LCD_RS . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      00A2H  1
+lcd_busy . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  result . . . . . . . . . . . . . . .  AUTO     DATA   BIT      0000H  1
+presence . . . . . . . . . . . . . . .  PUBLIC   DATA   BIT      0000H  1
+LCD_RW . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      00A3H  1
+writetab . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  i. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0006H  1
+Read_Temperature . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+display. . . . . . . . . . . . . . . .  PUBLIC   DATA   ARRAY    0002H  5
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    622    ----
+   CONSTANT SIZE    =     93    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      7    ----
+   IDATA SIZE       =   ----    ----
+C51 COMPILER V7.08   16021602                                                              09/08/2008 21:48:17 PAGE 8   
+
+   BIT SIZE         =      1       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

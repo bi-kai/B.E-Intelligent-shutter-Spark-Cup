@@ -1,2 +1,11 @@
-# B.E-Intelligent-shutter-Spark-Cup
-Intelligent shutter of 21th Spark Cup xidian university.
+# 智能百叶窗
+西安电子科技大学第21届星火杯作品，获得学院级特等奖，学校级一等奖。
+作品全称：温度、时间信息采集及相关信息显示的多功能无线遥控百叶窗及其自动控制系统。
+
+# 团队成员
+通信工程学院010713班：
+毕凯   01071457
+张宇奇 01071458
+张新硕 01071450
+
+

@@ -1,0 +1,186 @@
+C51 COMPILER V7.00  ___絖___数                                                             10/24/2009 22:38:20 PAGE 1   
+
+
+C51 COMPILER V7.00, COMPILATION OF MODULE ___絖___数
+OBJECT MODULE PLACED IN 八步子函数.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE 八步子函数.c BROWSE DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          #include <reg51.h>
+   2           
+   3          sbit P1_0=P1^0;
+   4          sbit P1_1=P1^1;
+   5          sbit P1_2=P1^2;
+   6          sbit P1_3=P1^3;
+   7          
+   8          static unsigned int count; //计数
+   9          static int step_index; //步进索引数，值为0－7
+  10          
+  11          char i,j;
+  12          char HadBeenDone;
+  13          
+  14          static bit turn; //步进电机转动方向
+  15          static bit stop_flag; //步进电机停止标志
+  16          static int speedlevel; //步进电机转速参数，数值越大速度越慢，最小值为1，速度最快
+  17          static int spcount;    //步进电机转速参数计数
+  18          void delay(unsigned int endcount); //延时函数，延时为endcount*0.5毫秒
+  19          void gorun();          //步进电机控制步进函数
+  20          
+  21          void Motor_CompSlowlyDown(void);
+  22          
+  23          void main(void) 
+  24          {
+  25   1      count = 0;
+  26   1      step_index = 0;
+  27   1      spcount = 0;
+  28   1      stop_flag = 0;
+  29   1      
+  30   1      P1_0 = 0;
+  31   1      P1_1 = 0;
+  32   1      P1_2 = 0;
+  33   1      P1_3 = 0;
+  34   1      
+  35   1      EA = 1;            //允许CPU中断 
+  36   1      TMOD = 0x11; //设定时器0和1为16位模式1 
+  37   1      ET0 = 1;           //定时器0中断允许 
+  38   1      
+  39   1      TH0 = 0xFE;
+  40   1      TL0 = 0x0C;   //设定时每隔0.5ms中断一次
+  41   1      //TR0 = 1;         //开始计数
+  42   1      
+  43   1      turn = 0;
+  44   1      
+  45   1      do{
+  46   2      
+  47   2      Motor_CompSlowlyDown();
+  48   2      }while(1);
+  49   1      
+  50   1      } 
+  51          
+  52          void Motor_CompSlowlyDown(void){
+  53   1      turn=1;
+  54   1      spcount=0;
+  55   1          speedlevel = 2;
+C51 COMPILER V7.00  ___絖___数                                                             10/24/2009 22:38:20 PAGE 2   
+
+  56   1               for(i=0;i<=7;i++)
+  57   1                      for(j=0;j<=15;j++){HadBeenDone=0;TH0=0xFE;TL0=0x0c;TR0=1;delay(2);
+  58   2                      if(HadBeenDone==1){
+  59   3                      if(spcount<=0){spcount=speedlevel;
+  60   4                      gorun();}}}
+  61   1                      TR0=0;
+  62   1      }
+  63          
+  64          //定时器0中断处理 
+  65          void timeint(void) interrupt 1 
+  66          { 
+  67   1      TH0=0xFE;
+  68   1      TL0=0x0C; //设定时每隔0.5ms中断一次
+  69   1      
+  70   1      
+  71   1      count++;
+  72   1      if(HadBeenDone==0){HadBeenDone=1;
+  73   2      spcount--;
+  74   2      }
+  75   1      
+  76   1      }
+  77          
+  78          void delay(unsigned int endcount)
+  79          {
+  80   1      count=0;
+  81   1      do{}while(count<endcount);
+  82   1      }
+  83          
+  84          void gorun()
+  85          {
+  86   1      if (stop_flag==1)
+  87   1      {
+  88   2          P1_0 = 0;
+  89   2          P1_1 = 0;
+  90   2          P1_2 = 0;
+  91   2          P1_3 = 0;
+  92   2          return;
+  93   2      }
+  94   1      
+  95   1      switch(step_index)
+  96   1      {
+  97   2      case 0: //0
+  98   2          P1_0 = 1;
+  99   2          P1_1 = 0;
+ 100   2          P1_2 = 0;
+ 101   2          P1_3 = 0;
+ 102   2          break;
+ 103   2      case 1: //0、1
+ 104   2          P1_0 = 1;
+ 105   2          P1_1 = 1;
+ 106   2          P1_2 = 0;
+ 107   2          P1_3 = 0;
+ 108   2          break;
+ 109   2      case 2: //1
+ 110   2          P1_0 = 0;
+ 111   2          P1_1 = 1;
+ 112   2          P1_2 = 0;
+ 113   2          P1_3 = 0;
+ 114   2          break;
+ 115   2      case 3: //1、2
+ 116   2          P1_0 = 0;
+ 117   2          P1_1 = 1;
+C51 COMPILER V7.00  ___絖___数                                                             10/24/2009 22:38:20 PAGE 3   
+
+ 118   2          P1_2 = 1;
+ 119   2          P1_3 = 0;
+ 120   2          break;
+ 121   2      case 4: //2
+ 122   2          P1_0 = 0;
+ 123   2          P1_1 = 0;
+ 124   2          P1_2 = 1;
+ 125   2          P1_3 = 0;
+ 126   2          break;
+ 127   2      case 5: //2、3
+ 128   2          P1_0 = 0;
+ 129   2          P1_1 = 0;
+ 130   2          P1_2 = 1;
+ 131   2          P1_3 = 1;
+ 132   2          break;
+ 133   2      case 6: //3
+ 134   2          P1_0 = 0;
+ 135   2          P1_1 = 0;
+ 136   2          P1_2 = 0;
+ 137   2          P1_3 = 1;
+ 138   2          break;
+ 139   2      case 7: //3、0
+ 140   2          P1_0 = 1;
+ 141   2          P1_1 = 0;
+ 142   2          P1_2 = 0;
+ 143   2          P1_3 = 1;
+ 144   2      }
+ 145   1      
+ 146   1      if (turn==0)
+ 147   1      {
+ 148   2          step_index++;
+ 149   2          if (step_index>7)
+ 150   2            step_index=0;
+ 151   2      }
+ 152   1      else
+ 153   1      {
+ 154   2          step_index--;
+ 155   2          if (step_index<0)
+ 156   2            step_index=7;
+ 157   2      }
+ 158   1          
+ 159   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    344    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     11    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

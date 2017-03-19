@@ -1,0 +1,811 @@
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 1   
+
+
+C51 COMPILER V7.00, COMPILATION OF MODULE __Ò¶´__Û_____ò
+OBJECT MODULE PLACED IN °ÙÒ¶´°×ÛºÏ³ÌÐò.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE °ÙÒ¶´°×ÛºÏ³ÌÐò.c BROWSE DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          #include < reg51.h >
+   2          #include < intrins.h >
+   3          
+   4          #define uchar unsigned char
+   5          #define uint  unsigned int
+   6          
+   7          sbit PT2272_Data0=P2^0;
+   8          sbit PT2272_Data1=P2^1;
+   9          sbit PT2272_Data2=P2^2;
+  10          sbit PT2272_Data3=P2^3;
+  11          
+  12          /******************************************/
+  13          
+  14          //ADC0832µÄÒý½Å
+  15          sbit AD2_CS =P1^4;  //ADC0832 chip seclect
+  16          sbit AD2_DI =P3^4;  //ADC0832 k in
+  17          sbit AD2_DO =P3^4;  //ADC0832 k out
+  18          sbit AD2_CLK=P1^5; //ADC0832 clock signal
+  19          sbit LED2_=P0^5;
+  20          //ADC0832µÄÒý½Å
+  21          sbit AD1_CS =P3^5;  //ADC0832 chip seclect
+  22          sbit AD1_DI =P3^7;  //ADC0832 k in
+  23          sbit AD1_DO =P3^7;  //ADC0832 k out
+  24          sbit AD1_CLK=P3^6; //ADC0832 clock signal
+  25          sbit LED1_=P0^6;
+  26          
+  27          sbit Speaker=P1^7;
+  28          sbit P3_2=P3^2;
+  29          
+  30          sbit LED4_=P0^7;  //×Ô¶¯µ÷½ÚÖ¸Ê¾µÆ
+  31          sbit LED5_=P2^7;  //×Ô¶¯µ÷½ÚÖ¸Ê¾µÆ
+  32          
+  33          sbit LED6_=P0^0;  //ÍêÈ«´ò¿ªÖ¸Ê¾µÆ
+  34          sbit LED7_=P0^1;  //ÍêÈ«¹Ø±ÕÖ¸Ê¾µÆ
+  35          
+  36          int meanvalue1;
+  37          int meanvalue2; 
+  38          
+  39          
+  40          unsigned char data  temp_data1_[2] = {0x00,0x00} ;
+  41          unsigned char data  display1_[5] =   {0x00,0x00,0x00,0x00,0x00} ;
+  42          unsigned char data  temp_data2_[2] = {0x00,0x00} ;
+  43          unsigned char data  display2_[5] =   {0x00,0x00,0x00,0x00,0x00} ;
+  44          unsigned char code  ditab[16] =    {0x00,0x01,0x01,0x02,0x03,0x03,0x04,0x04,
+  45                                                                  0x05,0x06,0x06,0x07,0x08,0x08,0x09,0x09} ;/*Ð¡ÊýÎ»
+             -±í£¬ËÄÉáÎåÈë*/
+  46          
+  47          
+  48          /******************¶¨Ê±¹¦ÄÜ²¿·Ö************************/
+  49          
+  50          uchar T1_h,T1_m,T1_s,T1_counter;
+  51          
+  52          void T1_init()
+  53          {
+  54   1      
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 2   
+
+  55   1        TMOD=0x11;
+  56   1        TH1=0x94;
+  57   1        TL1=0x00;
+  58   1        EA=1;
+  59   1        ET1=1;
+  60   1        TR1=1;
+  61   1        T1_counter=0;
+  62   1        T1_h=12;T1_m=0;T1_s=0;
+  63   1      
+  64   1      }
+  65          
+  66          /******************************************/
+  67          
+  68          bit SignalControl_Flag1=1;              //Á¬¶¯±êÖ¾Î»
+  69          bit SignalControl_Flag2=1;              //½öÔÊÐíµ÷ÓÃÒ»´Îµç»ú³ÌÐò±êÖ¾Î»
+  70          bit SelfControl_Flag=0;         //×Ô¶¯¿ØÖÆ±êÖ¾Î»
+  71          bit Check_ForOnce=1;            //Ã¿´Î°´¼üÖÐ¶ÏºóÖ»ÔÊÐí¶Ë¿ÚÉ¨ÃèÒ»´Î
+  72          bit Base_Flag=0;                        //ÅÐ¶ÏÊ±¼äÊÇ·ñÔÚÔÊÐí·¶Î§Ö®ÄÚ±êÖ¾Î»
+  73          
+  74          char INT1_Counter=0;
+  75          //char Motor_StepCounter=0;
+  76          
+  77          void Motor_CompSlowlyUp(void);
+  78          void Motor_CompSlowlyDown(void);
+  79          void MainModel2(void);
+  80          void MainModel1(void);
+  81          void Motor_OpenUp(void);
+  82          void Motor_CloseDown(void);
+  83          int Motor_StepCounter=90;
+  84          
+  85          
+  86          void delay1(int ms)//ÑÓ³Ùº¯Êý
+  87          
+  88          { unsigned char y ;
+  89   1        while(ms--)
+  90   1        {
+  91   2        for(y = 0 ; y<250 ; y++)
+  92   2        {
+  93   3         _nop_() ;
+  94   3         _nop_() ;
+  95   3         _nop_() ;
+  96   3         _nop_() ;
+  97   3        }
+  98   2        }
+  99   1       }
+ 100          
+ 101          
+ 102           /*************************¼ÓÈëµç»ú1***************************/
+ 103          
+ 104          sbit P1_0=P1^0;
+ 105          sbit P1_1=P1^1;
+ 106          sbit P1_2=P1^2;
+ 107          sbit P1_3=P1^3;
+ 108          
+ 109          static unsigned int count; //¼ÆÊý
+ 110          static int step_index; //²½½øË÷ÒýÊý£¬ÖµÎª0£­7
+ 111          
+ 112          char i,j;
+ 113          char HadBeenDone;
+ 114          
+ 115          static bit turn; //²½½øµç»ú×ª¶¯·½Ïò
+ 116          static bit stop_flag; //²½½øµç»úÍ£Ö¹±êÖ¾
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 3   
+
+ 117          static int speedlevel; //²½½øµç»ú×ªËÙ²ÎÊý£¬ÊýÖµÔ½´óËÙ¶ÈÔ½Âý£¬×îÐ¡ÖµÎª1£¬ËÙ¶È×î¿ì
+ 118          static int spcount;    //²½½øµç»ú×ªËÙ²ÎÊý¼ÆÊý
+ 119          void delay(unsigned int endcount); //ÑÓÊ±º¯Êý£¬ÑÓÊ±Îªendcount*0.5ºÁÃë
+ 120          void gorun();          //²½½øµç»ú¿ØÖÆ²½½øº¯Êý
+ 121          
+ 122          
+ 123          
+ 124          
+ 125           /***************************************¼ÓÈëÁ½¸öAD×ÛºÏ²¿·ÖµÄ³ÌÐò*****************************************
+             -***************************/
+ 126          /*********************************************************************************************************
+             -***************************/
+ 127          /*********************************************************************************************************
+             -***************************/
+ 128          /*********************************************************************************************************
+             -***************************/
+ 129          /*********************************************************************************************************
+             -***************************/
+ 130          
+ 131          unsigned int Adc1_0832()     //AD×ª»»£¬·µ»Ø½á¹û
+ 132          {
+ 133   1          uchar i=0;
+ 134   1          uchar j;
+ 135   1          uint dat=0;
+ 136   1          uchar ndat=0;
+ 137   1          AD1_DI=1;
+ 138   1          _nop_();
+ 139   1          _nop_();
+ 140   1          AD1_CS=0;//À­µÍCS¶Ë
+ 141   1          _nop_();
+ 142   1          _nop_();
+ 143   1          AD1_CLK=1;//À­¸ßCLK¶Ë
+ 144   1          _nop_();
+ 145   1          _nop_();
+ 146   1          AD1_CLK=0;//À­µÍCLK¶Ë,ÐÎ³ÉÏÂ½µÑØ1
+ 147   1          _nop_();
+ 148   1          _nop_();
+ 149   1          AD1_CLK=1;//À­¸ßCLK¶Ë
+ 150   1          AD1_DI=0;   //Í¨µÀ0
+ 151   1          _nop_();
+ 152   1          _nop_();
+ 153   1          AD1_CLK=0;//À­µÍCLK¶Ë,ÐÎ³ÉÏÂ½µÑØ2
+ 154   1          _nop_();
+ 155   1          _nop_();
+ 156   1          AD1_CLK=1;//À­¸ßCLK¶Ë
+ 157   1          AD1_DI=1;//Ñ¡Í¨µÀ   1
+ 158   1          _nop_();
+ 159   1          _nop_();
+ 160   1          AD1_CLK=0;//À­µÍCLK¶Ë,ÐÎ³ÉÏÂ½µÑØ3
+ 161   1          AD1_DI=1;//¿ØÖÆÃüÁî½áÊø 
+ 162   1          _nop_();
+ 163   1          _nop_();
+ 164   1          dat=0;
+ 165   1          for(i=0;i<8;i++)
+ 166   1          {
+ 167   2              dat|=AD1_DO;//ÊÕÊý¾Ý
+ 168   2              AD1_CLK=1;
+ 169   2              _nop_();
+ 170   2              _nop_();
+ 171   2              AD1_CLK=0;//ÐÎ³ÉÒ»´ÎÊ±ÖÓÂö³å
+ 172   2              _nop_();
+ 173   2              _nop_();
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 4   
+
+ 174   2              dat<<=1;
+ 175   2              if(i==7)dat|=AD1_DO;
+ 176   2          }  
+ 177   1          for(i=0;i<8;i++)
+ 178   1          {
+ 179   2              j=0;
+ 180   2              j=j|AD1_DO;//ÊÕÊý¾Ý
+ 181   2              AD1_CLK=1;
+ 182   2              _nop_();
+ 183   2              _nop_();
+ 184   2              AD1_CLK=0;//ÐÎ³ÉÒ»´ÎÊ±ÖÓÂö³å
+ 185   2              _nop_();
+ 186   2              _nop_();
+ 187   2              j=j<<7;
+ 188   2              ndat=ndat|j;
+ 189   2              if(i<7)ndat>>=1;
+ 190   2          }
+ 191   1          AD1_CS=1;//À­µÍCS¶Ë
+ 192   1          AD1_CLK=0;//À­µÍCLK¶Ë
+ 193   1          AD1_DO=1;//À­¸ßÊý¾Ý¶Ë,»Øµ½³õÊ¼×´Ì¬
+ 194   1          dat<<=8;
+ 195   1          dat|=ndat;
+ 196   1          return(dat);            //return dat
+ 197   1      }
+ 198          /************************************************************/
+ 199          
+ 200           unsigned int Adc2_0832()     //AD×ª»»£¬·µ»Ø½á¹û
+ 201          {
+ 202   1          uchar i=0;
+ 203   1          uchar j;
+ 204   1          uint dat=0;
+ 205   1          uchar ndat=0;
+ 206   1          AD2_DI=1;
+ 207   1          _nop_();
+ 208   1          _nop_();
+ 209   1          AD2_CS=0;//À­µÍCS¶Ë
+ 210   1          _nop_();
+ 211   1          _nop_();
+ 212   1          AD2_CLK=1;//À­¸ßCLK¶Ë
+ 213   1          _nop_();
+ 214   1          _nop_();
+ 215   1          AD2_CLK=0;//À­µÍCLK¶Ë,ÐÎ³ÉÏÂ½µÑØ1
+ 216   1          _nop_();
+ 217   1          _nop_();
+ 218   1          AD2_CLK=1;//À­¸ßCLK¶Ë
+ 219   1          AD2_DI=0;   //Í¨µÀ0
+ 220   1          _nop_();
+ 221   1          _nop_();
+ 222   1          AD2_CLK=0;//À­µÍCLK¶Ë,ÐÎ³ÉÏÂ½µÑØ2
+ 223   1          _nop_();
+ 224   1          _nop_();
+ 225   1          AD2_CLK=1;//À­¸ßCLK¶Ë
+ 226   1          AD2_DI=1;//Ñ¡Í¨µÀ   1
+ 227   1          _nop_();
+ 228   1          _nop_();
+ 229   1          AD2_CLK=0;//À­µÍCLK¶Ë,ÐÎ³ÉÏÂ½µÑØ3
+ 230   1          AD2_DI=1;//¿ØÖÆÃüÁî½áÊø 
+ 231   1          _nop_();
+ 232   1          _nop_();
+ 233   1          dat=0;
+ 234   1          for(i=0;i<8;i++)
+ 235   1          {
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 5   
+
+ 236   2              dat|=AD2_DO;//ÊÕÊý¾Ý
+ 237   2              AD2_CLK=1;
+ 238   2              _nop_();
+ 239   2              _nop_();
+ 240   2              AD2_CLK=0;//ÐÎ³ÉÒ»´ÎÊ±ÖÓÂö³å
+ 241   2              _nop_();
+ 242   2              _nop_();
+ 243   2              dat<<=1;
+ 244   2              if(i==7)dat|=AD2_DO;
+ 245   2          }  
+ 246   1          for(i=0;i<8;i++)
+ 247   1          {
+ 248   2              j=0;
+ 249   2              j=j|AD2_DO;//ÊÕÊý¾Ý
+ 250   2              AD2_CLK=1;
+ 251   2              _nop_();
+ 252   2              _nop_();
+ 253   2              AD2_CLK=0;//ÐÎ³ÉÒ»´ÎÊ±ÖÓÂö³å
+ 254   2              _nop_();
+ 255   2              _nop_();
+ 256   2              j=j<<7;
+ 257   2              ndat=ndat|j;
+ 258   2              if(i<7)ndat>>=1;
+ 259   2          }
+ 260   1          AD2_CS=1;//À­µÍCS¶Ë
+ 261   1          AD2_CLK=0;//À­µÍCLK¶Ë
+ 262   1          AD2_DO=1;//À­¸ßÊý¾Ý¶Ë,»Øµ½³õÊ¼×´Ì¬
+ 263   1          dat<<=8;
+ 264   1          dat|=ndat;
+ 265   1          return(dat);            //return dat
+ 266   1      }
+ 267          
+ 268          /*                                                               ¶ÁÈ¡Êý¾Ý                         */  
+ 269          /*******************************************************************/     
+ 270          adc1_display(void) {
+ 271   1      
+ 272   1              LED1_=~LED1_;delay1(50);LED1_=~LED1_;delay1(50);LED1_=~LED1_;
+ 273   1      
+ 274   1           temp_data1_[0] =  Adc1_0832();   //Êý¾ÝµÍ8Î»
+ 275   1      
+ 276   1      
+ 277   1      /* Êý¾Ý×ª»»ÓëÎÂ¶ÈÏÔÊ¾                                              */
+ 278   1      /*******************************************************************/
+ 279   1        
+ 280   1        display1_[4]=(temp_data1_[0]&0x0f) ;  //»»Ëã³É8Î»¶þ½øÖÆ
+ 281   1        display1_[0]=ditab[display1_[4]]+0x30 ;     //²é±íµÃÐ¡ÊýÎ»µÄÖµ
+ 282   1      
+ 283   1        display1_[4]=((temp_data1_[0]&0xf0)>>4)|((temp_data1_[1]&0x0f)<<4) ;
+ 284   1        display1_[3]=display1_[4]/100+0x30 ;
+ 285   1        display1_[1]=display1_[4]%100 ;
+ 286   1        display1_[2]=display1_[1]/10+0x30 ;
+ 287   1        display1_[1]=display1_[1]%10+0x30 ;
+ 288   1      
+ 289   1                }
+ 290          
+ 291          
+ 292          
+ 293          
+ 294          
+ 295          
+ 296          
+ 297          adc2_display(void) {
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 6   
+
+ 298   1      
+ 299   1                      LED2_=~LED2_;delay1(50);LED2_=~LED2_;delay1(50);LED2_=~LED2_;
+ 300   1              
+ 301   1           temp_data2_[0] =  Adc2_0832();   //Êý¾ÝµÍ8Î»
+ 302   1      
+ 303   1      
+ 304   1      /*                                                      Êý¾Ý×ª»»                        */
+ 305   1      /*******************************************************************/
+ 306   1        
+ 307   1        display2_[4]=(temp_data2_[0]&0x0f) ;  //»»Ëã³É8Î»¶þ½øÖÆ
+ 308   1        display2_[0]=ditab[display2_[4]]+0x30 ;     //²é±íµÃÐ¡ÊýÎ»µÄÖµ
+ 309   1      
+ 310   1        display2_[4]=((temp_data2_[0]&0xf0)>>4)|((temp_data2_[1]&0x0f)<<4) ;
+ 311   1        display2_[3]=display2_[4]/100+0x30 ;
+ 312   1        display2_[1]=display2_[4]%100 ;
+ 313   1        display2_[2]=display2_[1]/10+0x30 ;
+ 314   1        display2_[1]=display2_[1]%10+0x30 ;
+ 315   1         
+ 316   1                }
+ 317          
+ 318          
+ 319          
+ 320          
+ 321          
+ 322          
+ 323           /**************************************************************/
+ 324          
+ 325          void main(void){
+ 326   1      
+ 327   1      /*************¼ÓÈëµç»ú2******************/
+ 328   1      Speaker=1;
+ 329   1      P3_2=1;
+ 330   1      
+ 331   1      T1_init();
+ 332   1      
+ 333   1      count = 0;
+ 334   1      step_index = 0;
+ 335   1      spcount = 0;
+ 336   1      stop_flag = 0;
+ 337   1      
+ 338   1      P1_0 = 0;
+ 339   1      P1_1 = 0;
+ 340   1      P1_2 = 0;
+ 341   1      P1_3 = 0;
+ 342   1      
+ 343   1      IT1=1;
+ 344   1      PX1=1;
+ 345   1      EX1=1;
+ 346   1      EA = 1;            //ÔÊÐíCPUÖÐ¶Ï 
+ 347   1      TMOD = 0x11; //Éè¶¨Ê±Æ÷0ºÍ1Îª16Î»Ä£Ê½1 
+ 348   1      ET0 = 1;           //¶¨Ê±Æ÷0ÖÐ¶ÏÔÊÐí 
+ 349   1      
+ 350   1      TH0 = 0xFE;
+ 351   1      TL0 = 0x0C;   //Éè¶¨Ê±Ã¿¸ô0.5msÖÐ¶ÏÒ»´Î
+ 352   1      
+ 353   1      /***************************************/
+ 354   1      
+ 355   1      
+ 356   1              PT2272_Data0=1;
+ 357   1              PT2272_Data1=1;
+ 358   1              PT2272_Data2=1;
+ 359   1              PT2272_Data3=1;
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 7   
+
+ 360   1      
+ 361   1      while(1){
+ 362   2      
+ 363   2      if((T1_h<=7)||(T1_h>=19)){      Motor_CloseDown();Base_Flag=1;}
+ 364   2      else Base_Flag=0;
+ 365   2      
+ 366   2      
+ 367   2              if      ((SelfControl_Flag==0)&&(Base_Flag==0)){ MainModel1(); }
+ 368   2              else     {  MainModel2();}
+ 369   2      
+ 370   2                        }
+ 371   1      
+ 372   1                        
+ 373   1                        
+ 374   1                        
+ 375   1                        
+ 376   1                        
+ 377   1                        
+ 378   1                        
+ 379   1      }
+ 380          
+ 381          
+ 382          /**********************************************¼ÓÈëµÄµÚÒ»²¿·Ö*********************************************
+             -********************************/
+ 383          
+ 384          void MainModel1(void){ 
+ 385   1      
+ 386   1      Speaker=1;
+ 387   1      P3_2=1;
+ 388   1      
+ 389   1      while(1) {   
+ 390   2              adc1_display();                 
+ 391   2              adc2_display();
+ 392   2      
+ 393   2      
+ 394   2      if               (Motor_StepCounter>=90){LED6_=0;LED7_=1;}
+ 395   2      else if(Motor_StepCounter<=0){LED6_=1;LED7_=0;}
+ 396   2      else   {LED6_=1;LED7_=1;}
+ 397   2      
+ 398   2      meanvalue1=((char)((display1_[1]-0x30+display2_[1]-0x30)/2)+0x30);
+ 399   2      meanvalue2=(display2_[2]-0x30+display1_[2]-0x30+0x30);
+ 400   2      
+ 401   2      
+ 402   2      
+ 403   2      if(meanvalue2>=0x31){Motor_StepCounter--;
+ 404   3      stop_flag=0;if(Motor_StepCounter<=0){stop_flag=1;}
+ 405   3      LED5_=1;LED4_=~LED4_;delay1(100);
+ 406   3      Motor_CompSlowlyUp();}
+ 407   2      
+ 408   2      else if(meanvalue1>=0x39){Motor_StepCounter--;
+ 409   3      stop_flag=0;
+ 410   3      if(Motor_StepCounter<=0){stop_flag=1;}
+ 411   3      LED5_=1;LED4_=~LED4_;delay1(100);
+ 412   3      Motor_CompSlowlyUp();}
+ 413   2      
+ 414   2      else if(meanvalue1>=0x35){LED4_=0;LED5_=0;delay1(100);}
+ 415   2      
+ 416   2      else   {Motor_StepCounter++;
+ 417   3      stop_flag=0;
+ 418   3      if(Motor_StepCounter>=90){stop_flag=1;}
+ 419   3      LED4_=1;LED5_=~LED5_;delay1(100);
+ 420   3      Motor_CompSlowlyDown();}
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 8   
+
+ 421   2      
+ 422   2      if(P3_2==0){Speaker=0;}
+ 423   2      else if(P3_2==1){Speaker=1;}
+ 424   2      
+ 425   2      if(SelfControl_Flag==1)break;
+ 426   2               }
+ 427   1      
+ 428   1      }
+ 429          
+ 430          /*************************¼ÓÈëµÄµÚÒ»²¿·Ö½áÊø**********************************/
+ 431          
+ 432          void MainModel2(void){
+ 433   1      
+ 434   1      Speaker=1;
+ 435   1      P3_2=1;
+ 436   1      stop_flag=0;
+ 437   1      
+ 438   1              while(1){
+ 439   2              PT2272_Data0=1;
+ 440   2              PT2272_Data1=1;
+ 441   2              PT2272_Data2=1;
+ 442   2              PT2272_Data3=1;
+ 443   2      
+ 444   2              
+ 445   2      if         (Motor_StepCounter>=90){LED6_=0;LED7_=1;}
+ 446   2      else if(Motor_StepCounter<=0){LED6_=1;LED7_=0;}
+ 447   2      else   {LED6_=1;LED7_=1;}
+ 448   2      
+ 449   2      
+ 450   2              if(Check_ForOnce==0){
+ 451   3      
+ 452   3                              if               ((PT2272_Data0==1)&&(PT2272_Data1==0)&&(PT2272_Data2==0)&&(PT2272_Data3==0))
+ 453   3                                               {SignalControl_Flag1=0;
+ 454   4                                               SignalControl_Flag2=1;
+ 455   4                                               }
+ 456   3      
+ 457   3                              else if((PT2272_Data0==0)&&(PT2272_Data1==0)&&(PT2272_Data2==1)&&(PT2272_Data3==0))
+ 458   3                                               {SignalControl_Flag1=0;
+ 459   4                                               SignalControl_Flag2=1;
+ 460   4                                               }
+ 461   3      
+ 462   3                              else if((PT2272_Data0==1)&&(PT2272_Data1==1)&&(PT2272_Data2==1)&&(PT2272_Data3==0))
+ 463   3                                               {SignalControl_Flag2=0;
+ 464   4                                               SignalControl_Flag1=1;
+ 465   4                                               }
+ 466   3      
+ 467   3                              else if((PT2272_Data0==0)&&(PT2272_Data1==1)&&(PT2272_Data2==1)&&(PT2272_Data3==0))
+ 468   3                                               {SignalControl_Flag2=0;
+ 469   4                                               SignalControl_Flag1=1;
+ 470   4                                               }
+ 471   3      
+ 472   3                              else if((PT2272_Data0==1)&&(PT2272_Data1==1)&&(PT2272_Data2==0)&&(PT2272_Data3==0))
+ 473   3                                               {SignalControl_Flag2=0;
+ 474   4                                               SignalControl_Flag1=1;
+ 475   4                                               }
+ 476   3      
+ 477   3                              else if((PT2272_Data0==0)&&(PT2272_Data1==1)&&(PT2272_Data2==0)&&(PT2272_Data3==0))
+ 478   3                                               {SignalControl_Flag2=0;
+ 479   4                                               SignalControl_Flag1=1;
+ 480   4                                               }
+ 481   3      
+ 482   3                              else if((PT2272_Data0==0)&&(PT2272_Data1==0)&&(PT2272_Data2==0)&&(PT2272_Data3==0))
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 9   
+
+ 483   3                                               {SignalControl_Flag2=0;
+ 484   4                                               SignalControl_Flag1=1;
+ 485   4                                               }
+ 486   3              
+ 487   3              Check_ForOnce=1;}
+ 488   2              /****************************************************************************************************/  
+ 489   2      
+ 490   2                              if               ((SignalControl_Flag1==0)&&((PT2272_Data0==1)&&(PT2272_Data1==0)&&(PT2272_Data2==0)&&(PT2272_Data3
+             -==0)))
+ 491   2                                               {if(Motor_StepCounter<=0)SignalControl_Flag1=1;
+ 492   3                                                else SignalControl_Flag1=0;
+ 493   3                                               Motor_CompSlowlyUp();
+ 494   3                                               Motor_StepCounter--;
+ 495   3                                               
+ 496   3                                               }
+ 497   2      
+ 498   2                              else if((SignalControl_Flag1==0)&&((PT2272_Data0==0)&&(PT2272_Data1==0)&&(PT2272_Data2==1)&&(PT2272_Dat
+             -a3==0)))
+ 499   2                                               {if(Motor_StepCounter>=90)SignalControl_Flag1=1;
+ 500   3                                                else SignalControl_Flag1=0;
+ 501   3                                               Motor_CompSlowlyDown();
+ 502   3                                               Motor_StepCounter++;
+ 503   3                                               }
+ 504   2      
+ 505   2                              else if((SignalControl_Flag2==0)&&((PT2272_Data0==1)&&(PT2272_Data1==1)&&(PT2272_Data2==1)&&(PT2272_Da
+             -ta3==0)))
+ 506   2                                               {Motor_OpenUp();
+ 507   3                                               SignalControl_Flag2=1;
+ 508   3                                               }
+ 509   2      
+ 510   2                              else if((SignalControl_Flag2==0)&&((PT2272_Data0==0)&&(PT2272_Data1==1)&&(PT2272_Data2==1)&&(PT2272_Dat
+             -a3==0)))
+ 511   2                                               {Motor_CloseDown();
+ 512   3                                               SignalControl_Flag2=1;
+ 513   3                                               }
+ 514   2      
+ 515   2                              else if((SignalControl_Flag2==0)&&((PT2272_Data0==1)&&(PT2272_Data1==1)&&(PT2272_Data2==0)&&(PT2272_Dat
+             -a3==0)))
+ 516   2                                               {Motor_CompSlowlyUp();
+ 517   3                                               Motor_StepCounter--;
+ 518   3                                               SignalControl_Flag2=1;
+ 519   3                                               }
+ 520   2      
+ 521   2                              else if((SignalControl_Flag2==0)&&((PT2272_Data0==0)&&(PT2272_Data1==1)&&(PT2272_Data2==0)&&(PT2272_Dat
+             -a3==0)))
+ 522   2                                               {Motor_CompSlowlyDown();
+ 523   3                                               Motor_StepCounter++;
+ 524   3                                               SignalControl_Flag2=1;
+ 525   3                                               }
+ 526   2      
+ 527   2      if(P3_2==0){Speaker=0;}
+ 528   2      else if(P3_2==1){Speaker=1;}
+ 529   2      
+ 530   2      
+ 531   2              delay1(100);
+ 532   2              if(SelfControl_Flag==0)break;
+ 533   2              
+ 534   2              }
+ 535   1      
+ 536   1      }
+ 537          
+ 538          
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 10  
+
+ 539          void SelfControl_int(void) interrupt 2
+ 540          {
+ 541   1              delay1(100);
+ 542   1              Check_ForOnce=0;
+ 543   1              if((PT2272_Data0==0)&&(PT2272_Data1==0)&&(PT2272_Data2==0)&&(PT2272_Data3==1))
+ 544   1                              {SelfControl_Flag=0;}
+ 545   1              else if((PT2272_Data0==0)&&(PT2272_Data1==0)&&(PT2272_Data2==1)&&(PT2272_Data3==1))
+ 546   1                              {SelfControl_Flag=1;}
+ 547   1                              
+ 548   1                              /*      
+ 549   1                      INT1_Counter++;
+ 550   1                      if(INT1_Counter==5)INT1_Counter=1;      
+ 551   1              }
+ 552   1      if((INT1_Counter%2)==1){SelfControl_Flag=1;}
+ 553   1      else SelfControl_Flag=0;
+ 554   1      */
+ 555   1      }
+ 556          
+ 557          /***************************************ÒÔÏÂ¼ÓÈëµç»ú³ÌÐò*******************************************/
+ 558          
+ 559          void Motor_CloseDown(void){
+ 560   1      turn=1;
+ 561   1      while(Motor_StepCounter<=90){
+ 562   2      turn=1;
+ 563   2              Motor_CompSlowlyDown();
+ 564   2              Motor_StepCounter++;
+ 565   2      
+ 566   2      if         (Motor_StepCounter>=90){LED6_=0;LED7_=1;}
+ 567   2      else if(Motor_StepCounter<=0){LED6_=1;LED7_=0;}
+ 568   2      else   {LED6_=1;LED7_=1;}
+ 569   2      
+ 570   2      }
+ 571   1      
+ 572   1      }
+ 573          
+ 574          
+ 575          /*****************************************************************************************************/
+ 576          
+ 577          void Motor_OpenUp(void){
+ 578   1      turn=0;
+ 579   1      while(Motor_StepCounter>=0){
+ 580   2      turn=0;
+ 581   2              Motor_CompSlowlyUp();
+ 582   2              Motor_StepCounter--;
+ 583   2      
+ 584   2      if         (Motor_StepCounter>=90){LED6_=0;LED7_=1;}
+ 585   2      else if(Motor_StepCounter<=0){LED6_=1;LED7_=0;}
+ 586   2      else   {LED6_=1;LED7_=1;}
+ 587   2      
+ 588   2      }
+ 589   1      
+ 590   1      }
+ 591          
+ 592          
+ 593          /*****************************************************************************************************/
+ 594          
+ 595          void Motor_CompSlowlyDown(void){
+ 596   1      turn=1;
+ 597   1      spcount=0;
+ 598   1          speedlevel=2;
+ 599   1               for(i=0;i<=15;i++)
+ 600   1                      for(j=0;j<=15;j++){HadBeenDone=0;TH0=0xFE;TL0=0x0c;TR0=1;delay(2);
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 11  
+
+ 601   2                      if(HadBeenDone==1){
+ 602   3                      if(spcount<=0){spcount=speedlevel;
+ 603   4                      gorun();}}}
+ 604   1                      TR0=0;
+ 605   1      }
+ 606          
+ 607          
+ 608          /**************************************************************************************************/
+ 609          
+ 610          void Motor_CompSlowlyUp(void){
+ 611   1      turn=0;
+ 612   1      spcount=0;
+ 613   1          speedlevel=2;
+ 614   1               for(i=0;i<=15;i++)
+ 615   1                      for(j=0;j<=15;j++){HadBeenDone=0;TH0=0xFE;TL0=0x0c;TR0=1;delay(2);
+ 616   2                      if(HadBeenDone==1){
+ 617   3                      if(spcount<=0){spcount=speedlevel;
+ 618   4                      gorun();}}}
+ 619   1                      TR0=0;
+ 620   1      }
+ 621          
+ 622          
+ 623          
+ 624          
+ 625          /*************************************************************************************/
+ 626          
+ 627          /*************************¶¨Ê±Æ÷1µÄÖÐ¶Ï**********************/
+ 628          void Time0() interrupt 3  
+ 629          {
+ 630   1        TH1=0x94;
+ 631   1        TL1=0x00;
+ 632   1        T1_counter++;
+ 633   1        if(T1_counter==20)
+ 634   1        {
+ 635   2          T1_s++;
+ 636   2        T1_counter=0;
+ 637   2        if(T1_s==60)
+ 638   2        { 
+ 639   3          T1_m++;
+ 640   3          T1_s=0;
+ 641   3            if(T1_m==60)
+ 642   3          {
+ 643   4            T1_h++;
+ 644   4          T1_m=0;
+ 645   4          if(T1_h==24)
+ 646   4           T1_h=0;
+ 647   4               }
+ 648   3             }
+ 649   2      
+ 650   2        }
+ 651   1      }
+ 652          
+ 653          
+ 654          /****************¶¨Ê±Æ÷0ÖÐ¶Ï´¦Àí*****************************/ 
+ 655          void timeint(void) interrupt 1 
+ 656          { 
+ 657   1      TH0=0xFE;
+ 658   1      TL0=0x0C; //Éè¶¨Ê±Ã¿¸ô0.5msÖÐ¶ÏÒ»´Î
+ 659   1      
+ 660   1      
+ 661   1      count++;
+ 662   1      if(HadBeenDone==0){HadBeenDone=1;
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 12  
+
+ 663   2      spcount--;
+ 664   2      }
+ 665   1      
+ 666   1      }
+ 667          
+ 668          void delay(unsigned int endcount)
+ 669          {
+ 670   1      count=0;
+ 671   1      do{}while(count<endcount);
+ 672   1      }
+ 673          
+ 674          void gorun()
+ 675          {
+ 676   1      if (stop_flag==1)
+ 677   1      {
+ 678   2          P1_0 = 0;
+ 679   2          P1_1 = 0;
+ 680   2          P1_2 = 0;
+ 681   2          P1_3 = 0;
+ 682   2          return;
+ 683   2      }
+ 684   1      
+ 685   1      switch(step_index)
+ 686   1      {
+ 687   2      case 0: //0
+ 688   2          P1_0 = 1;
+ 689   2          P1_1 = 0;
+ 690   2          P1_2 = 0;
+ 691   2          P1_3 = 0;
+ 692   2          break;
+ 693   2      case 1: //0¡¢1
+ 694   2          P1_0 = 1;
+ 695   2          P1_1 = 1;
+ 696   2          P1_2 = 0;
+ 697   2          P1_3 = 0;
+ 698   2          break;
+ 699   2      case 2: //1
+ 700   2          P1_0 = 0;
+ 701   2          P1_1 = 1;
+ 702   2          P1_2 = 0;
+ 703   2          P1_3 = 0;
+ 704   2          break;
+ 705   2      case 3: //1¡¢2
+ 706   2          P1_0 = 0;
+ 707   2          P1_1 = 1;
+ 708   2          P1_2 = 1;
+ 709   2          P1_3 = 0;
+ 710   2          break;
+ 711   2      case 4: //2
+ 712   2          P1_0 = 0;
+ 713   2          P1_1 = 0;
+ 714   2          P1_2 = 1;
+ 715   2          P1_3 = 0;
+ 716   2          break;
+ 717   2      case 5: //2¡¢3
+ 718   2          P1_0 = 0;
+ 719   2          P1_1 = 0;
+ 720   2          P1_2 = 1;
+ 721   2          P1_3 = 1;
+ 722   2          break;
+ 723   2      case 6: //3
+ 724   2          P1_0 = 0;
+C51 COMPILER V7.00  __Ò¶´__Û_____ò                                                         06/09/2010 00:12:51 PAGE 13  
+
+ 725   2          P1_1 = 0;
+ 726   2          P1_2 = 0;
+ 727   2          P1_3 = 1;
+ 728   2          break;
+ 729   2      case 7: //3¡¢0
+ 730   2          P1_0 = 1;
+ 731   2          P1_1 = 0;
+ 732   2          P1_2 = 0;
+ 733   2          P1_3 = 1;
+ 734   2      }
+ 735   1      
+ 736   1      if (turn==0)
+ 737   1      {
+ 738   2          step_index++;
+ 739   2          if (step_index>7)
+ 740   2            step_index=0;
+ 741   2      }
+ 742   1      else
+ 743   1      {
+ 744   2          step_index--;
+ 745   2          if (step_index<0)
+ 746   2            step_index=7;
+ 747   2      }
+ 748   1          
+ 749   1      }
+ 750          
+ 751          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1862    ----
+   CONSTANT SIZE    =     16    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     36    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      7    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

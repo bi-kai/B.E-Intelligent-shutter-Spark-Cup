@@ -1,0 +1,93 @@
+C51 COMPILER V7.00  实_镋EPROM                                                             11/11/2009 16:42:11 PAGE 1   
+
+
+C51 COMPILER V7.00, COMPILATION OF MODULE 实_镋EPROM
+OBJECT MODULE PLACED IN 实验eeprom.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE 实验eeprom.c BROWSE DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          //进入新编的写函数时将1到7的所有扇区全部擦除
+   2          
+   3          
+   4          void New_Temprature(void){
+   5   1      
+   6   1      Model4_WTemprature[0]=display[2];
+*** ERROR C202 IN LINE 6 OF 实验EEPROM.C: 'Model4_WTemprature': undefined identifier
+   7   1      Model4_WTemprature[1]=display[1];
+*** ERROR C202 IN LINE 7 OF 实验EEPROM.C: 'Model4_WTemprature': undefined identifier
+   8   1      Model4_WTemprature[2]=display[0];
+*** ERROR C202 IN LINE 8 OF 实验EEPROM.C: 'Model4_WTemprature': undefined identifier
+   9   1      
+  10   1      }
+  11          
+  12          
+  13          
+  14          
+  15          uchar Model4_WTemprature[3];
+*** ERROR C129 IN LINE 15 OF 实验EEPROM.C: missing ';' before 'Model4_WTemprature'
+  16          uint Model4_Eeprom_Counter=0x2200;
+  17          
+  18          bit Model4_SendFlag=0;
+  19          uint Model4_SendData_Counter=0x2200;
+  20          uchar Model4_STemprature[3];
+  21          
+  22          
+  23          void Model4_Sve_Data(void){
+  24          
+  25                  uchar M4_Wi;
+  26                  uint M4_Wj=0,disc=0;
+  27          
+  28                  
+  29                  IAP_CONTR = ENABLE_ISP;         //打开IAP 功能, 设置Flash 操作等待时间 
+  30                  for(disc=0;disc<=6;disc++){
+  31          
+  32                  EEPROM_erase(0x2000+(disc+1)*0x200);
+  33                  }
+  34                  EEPROM_IAP_Disable();
+  35                          
+  36                  if(((0x2fff-Model4_Eeprom_Counter)>=3)&&(Model4_Eeprom_Counter<=0x2fff)){
+  37                                  New_Temprature();
+  38                                  for(M4_Wi=0;M4_Wi<=2;M4_Wi++){
+  39                                          EEPROM_write(Model4_Eeprom_Counter,Model4_WTemprature[M4_Wi]);
+  40                                          M4_Wi++;
+  41                                          M4_Wj++;
+  42                                  }       
+  43                  }
+  44          
+  45          else {M4_Wj=0;}
+  46          
+  47          //if((M4_Wj%509)==1){disc=(0x2000+((M4_Wj/511)+2)*0x200+256);EEPROM_erase(disc);}
+  48          
+  49          EEPROM_IAP_Disable(); //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态
+  50          }
+  51          
+C51 COMPILER V7.00  实_镋EPROM                                                             11/11/2009 16:42:11 PAGE 2   
+
+  52          
+  53          
+  54          
+  55          void Model4_Send_Data(void){
+  56          
+  57                  uchar M4_Si,M4_Sj;
+  58                  if(((Model4_SendFlag==0)&&((0x2fff-Model4_SendData_Counter)>=3)&&(Model4_SendData_Counter<0x2fff)){
+  59                          IAP_CONTR = ENABLE_ISP;         //打开IAP 功能, 设置Flash 操作等待时间
+  60                          for(M4_Si=0;M4_Si<=2;M4_Si++){
+  61                                  Model4_STemprature[M4_Si]=EEPROM_read(Model4_SendData_Counter);
+  62                                  Model4_SendData_Counter++;
+  63                                  M4_Si++;                
+  64                          }
+  65                  send(Model4_STemprature);
+  66                  send("\x20");
+  67                  
+  68                  }
+  69          
+  70          else if(((0x2fff-Model4_Eeprom_Counter)<3)&&(Model4_SendFlag==0)){
+  71                          Model4_SendFlag=1;send("Sanding Over");}
+  72          
+  73          }
+  74          
+  75          
+  76          
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  4 ERROR(S)

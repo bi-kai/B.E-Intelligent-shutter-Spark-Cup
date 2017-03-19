@@ -1,0 +1,181 @@
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+LCD1.C(17): 错误 C141: syntax error near 'void'
+LCD1.C(37): 错误 C202: 'RS': undefined identifier
+LCD1.C(38): 错误 C202: 'RW': undefined identifier
+LCD1.C(39): 错误 C202: 'E': undefined identifier
+LCD1.C(41): 错误 C202: 'E': undefined identifier
+LCD1.C(46): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(52): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(61): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(63): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(65): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(72): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(73): 错误 C202: 'RS': undefined identifier
+LCD1.C(74): 错误 C202: 'RW': undefined identifier
+LCD1.C(75): 错误 C202: 'E': undefined identifier
+LCD1.C(77): 错误 C202: 'E': undefined identifier
+目标没产生
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+LCD1.C(20): 错误 C141: syntax error near 'void'
+LCD1.C(49): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(55): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(64): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(66): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(68): 错误 C202: 'lcd_bus': undefined identifier
+LCD1.C(75): 错误 C202: 'lcd_bus': undefined identifier
+目标没产生
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+LCD1.C(22): 错误 C141: syntax error near 'void'
+目标没产生
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+Program Size: data=16.0 xdata=0 code=258
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 0   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+Program Size: data=16.0 xdata=0 code=258
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 0   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?READ_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?DISP_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?BEEP?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?ERROR_MENU?LCD1
+
+Program Size: data=16.2 xdata=0 code=848
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 4   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?READ_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?DISP_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?BEEP?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?ERROR_MENU?LCD1
+
+Program Size: data=16.2 xdata=0 code=848
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 4   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?READ_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?DISP_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?BEEP?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?ERROR_MENU?LCD1
+
+Program Size: data=16.2 xdata=0 code=848
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 4   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?READ_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?DISP_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?BEEP?LCD1
+
+Program Size: data=16.2 xdata=0 code=851
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 3   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+LCD1.C(259): 错误 C202: 'BEEP': undefined identifier
+LCD1.C(261): 错误 C202: 'BEEP': undefined identifier
+目标没产生
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?READ_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?DISP_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?BEEP?LCD1
+
+Program Size: data=16.2 xdata=0 code=847
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 3   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?READ_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?DISP_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?BEEP?LCD1
+
+Program Size: data=16.2 xdata=0 code=847
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 3   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?READ_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?DISP_TEMPERATURE?LCD1
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?BEEP?LCD1
+
+Program Size: data=16.2 xdata=0 code=847
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 3   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+Program Size: data=16.2 xdata=0 code=866
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 0   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+Program Size: data=16.2 xdata=0 code=866
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 0   警告 (s).
+建造目标 '目标 1'
+正在编绎 lcd1.c... 
+连接中... 
+Program Size: data=16.2 xdata=0 code=870
+正在从 "lcd1" 产生 HEX文件...   
+"lcd1" - 0 错误 (s), 0   警告 (s).

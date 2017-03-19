@@ -1,0 +1,3 @@
+"加入eeprom百叶窗综合程序.obj" 
+TO "加入eerpom的百叶窗综合处程序" 
+RAMSIZE(256) 

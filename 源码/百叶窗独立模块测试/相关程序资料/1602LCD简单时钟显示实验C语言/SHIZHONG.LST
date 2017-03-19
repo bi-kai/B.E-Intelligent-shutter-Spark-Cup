@@ -1,0 +1,72 @@
+C51 COMPILER V7.20   SHIZHONG                                                              09/15/2008 21:57:32 PAGE 1   
+
+
+C51 COMPILER V7.20, COMPILATION OF MODULE SHIZHONG
+OBJECT MODULE PLACED IN D:\自己三代\第三代光盘资料\开发板示例程序\1602LCD简单时钟显示实验\SHIZHONG.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE D:\自己三代\第三代光盘资料\开发板示例程序\1602LCD简单时钟显示实验\SHIZHONG.
+                    -C DB SB OE
+
+line level    source
+
+C51 COMPILER V7.20   SHIZHONG                                                              09/15/2008 21:57:32 PAGE 2   
+
+NAME                                    CLASS   MSPACE  TYPE    OFFSET  SIZE
+====                                    =====   ======  ====    ======  ====
+
+
+P0 . . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   0080H  1
+P1 . . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   0090H  1
+P2 . . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   00A0H  1
+P3 . . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   00B0H  1
+counter. . . . . . . . . . . . . . . .  PUBLIC   DATA   U_CHAR   0001H  1
+EA . . . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      00AFH  1
+newbuf . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+_disp. . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  dispadd. . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+  tmp. . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+delay. . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  i. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+keypro . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  scanl. . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+  scanh. . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0006H  1
+RS . . . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      00A2H  1
+main . . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+RW . . . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      00A3H  1
+shen . . . . . . . . . . . . . . . . .  PUBLIC   CODE   ARRAY    0000H  7
+TMOD . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   0089H  1
+init . . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+_lcd_wmc . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  i. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+_lcd_wmd . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0003H  -----
+  i. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0007H  1
+word . . . . . . . . . . . . . . . . .  PUBLIC   CODE   ARRAY    0007H  12
+Time0. . . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+E. . . . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      00A4H  1
+ET0. . . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      00A9H  1
+lcd_init . . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  i. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0006H  1
+adjustime. . . . . . . . . . . . . . .  PUBLIC   CODE   PROC     0000H  -----
+  k. . . . . . . . . . . . . . . . . .  * REG *  DATA   U_CHAR   0006H  1
+  add. . . . . . . . . . . . . . . . .  STATIC   DATA   U_CHAR   0000H  1
+TH0. . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   008CH  1
+TL0. . . . . . . . . . . . . . . . . .  SFR      DATA   U_CHAR   008AH  1
+at . . . . . . . . . . . . . . . . . .  PUBLIC   DATA   BIT      0000H  1
+TR0. . . . . . . . . . . . . . . . . .  ABSBIT   -----  BIT      008CH  1
+h. . . . . . . . . . . . . . . . . . .  PUBLIC   DATA   U_CHAR   0002H  1
+m. . . . . . . . . . . . . . . . . . .  PUBLIC   DATA   U_CHAR   0003H  1
+dispbuf. . . . . . . . . . . . . . . .  PUBLIC   DATA   ARRAY    0004H  8
+s. . . . . . . . . . . . . . . . . . .  PUBLIC   DATA   U_CHAR   000CH  1
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    588    ----
+   CONSTANT SIZE    =     19    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     13    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

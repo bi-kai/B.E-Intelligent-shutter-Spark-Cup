@@ -1,0 +1,209 @@
+C51 COMPILER V7.00  _阓_________数                                                         10/24/2009 22:51:51 PAGE 1   
+
+
+C51 COMPILER V7.00, COMPILATION OF MODULE _阓_________数
+OBJECT MODULE PLACED IN 完全关闭子函数.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE 完全关闭子函数.c BROWSE DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          #include <reg51.h>
+   2           
+   3          sbit P1_0=P1^0;
+   4          sbit P1_1=P1^1;
+   5          sbit P1_2=P1^2;
+   6          sbit P1_3=P1^3;
+   7          
+   8          static unsigned int count; //计数
+   9          static int step_index; //步进索引数，值为0－7
+  10          
+  11          char i,j,k;
+  12          char HadBeenDone;
+  13          
+  14          static bit turn; //步进电机转动方向
+  15          static bit stop_flag; //步进电机停止标志
+  16          static int speedlevel; //步进电机转速参数，数值越大速度越慢，最小值为1，速度最快
+  17          static int spcount;    //步进电机转速参数计数
+  18          void delay(unsigned int endcount); //延时函数，延时为endcount*0.5毫秒
+  19          void gorun();          //步进电机控制步进函数
+  20          
+  21          void Motor_CompSlowlyDown(void);
+  22          void Motor_CloseDown(void);
+  23          char Motor_StepCounter=82;
+  24          
+  25          void main(void) 
+  26          {
+  27   1      count = 0;
+  28   1      step_index = 0;
+  29   1      spcount = 0;
+  30   1      stop_flag = 0;
+  31   1      
+  32   1      P1_0 = 0;
+  33   1      P1_1 = 0;
+  34   1      P1_2 = 0;
+  35   1      P1_3 = 0;
+  36   1      
+  37   1      EA = 1;            //允许CPU中断 
+  38   1      TMOD = 0x11; //设定时器0和1为16位模式1 
+  39   1      ET0 = 1;           //定时器0中断允许 
+  40   1      
+  41   1      TH0 = 0xFE;
+  42   1      TL0 = 0x0C;   //设定时每隔0.5ms中断一次
+  43   1      //TR0 = 1;         //开始计数
+  44   1      
+  45   1      turn = 0;
+  46   1      
+  47   1      do{
+  48   2      Motor_CloseDown();
+  49   2      TR0=1;
+  50   2      delay(10000);
+  51   2      TR0=0;
+  52   2      //turn=1;
+  53   2      for(k=0;k<=82;k++){
+  54   3      Motor_CompSlowlyDown();
+  55   3      }
+C51 COMPILER V7.00  _阓_________数                                                         10/24/2009 22:51:51 PAGE 2   
+
+  56   2      TR0=1;
+  57   2      delay(10000);
+  58   2      TR0=0;
+  59   2      }while(1);
+  60   1      
+  61   1      } 
+  62          
+  63          void Motor_CloseDown(void){
+  64   1      turn=1;
+  65   1      while(Motor_StepCounter>=0){
+  66   2      turn=1;
+  67   2              Motor_CompSlowlyDown();
+  68   2              Motor_StepCounter--;
+  69   2      }
+  70   1      
+  71   1      }
+  72          
+  73          void Motor_CompSlowlyDown(void){
+  74   1      turn=1;
+  75   1      spcount=0;
+  76   1          speedlevel = 2;
+  77   1               for(i=0;i<=7;i++)
+  78   1                      for(j=0;j<=15;j++){HadBeenDone=0;TH0=0xFE;TL0=0x0c;TR0=1;delay(2);
+  79   2                      if(HadBeenDone==1){
+  80   3                      if(spcount<=0){spcount=speedlevel;
+  81   4                      gorun();}}}
+  82   1                      TR0=0;
+  83   1      }
+  84          
+  85          //定时器0中断处理 
+  86          void timeint(void) interrupt 1 
+  87          { 
+  88   1      TH0=0xFE;
+  89   1      TL0=0x0C; //设定时每隔0.5ms中断一次
+  90   1      
+  91   1      
+  92   1      count++;
+  93   1      if(HadBeenDone==0){HadBeenDone=1;
+  94   2      spcount--;
+  95   2      }
+  96   1      
+  97   1      }
+  98          
+  99          void delay(unsigned int endcount)
+ 100          {
+ 101   1      count=0;
+ 102   1      do{}while(count<endcount);
+ 103   1      }
+ 104          
+ 105          void gorun()
+ 106          {
+ 107   1      if (stop_flag==1)
+ 108   1      {
+ 109   2          P1_0 = 0;
+ 110   2          P1_1 = 0;
+ 111   2          P1_2 = 0;
+ 112   2          P1_3 = 0;
+ 113   2          return;
+ 114   2      }
+ 115   1      
+ 116   1      switch(step_index)
+ 117   1      {
+C51 COMPILER V7.00  _阓_________数                                                         10/24/2009 22:51:51 PAGE 3   
+
+ 118   2      case 0: //0
+ 119   2          P1_0 = 1;
+ 120   2          P1_1 = 0;
+ 121   2          P1_2 = 0;
+ 122   2          P1_3 = 0;
+ 123   2          break;
+ 124   2      case 1: //0、1
+ 125   2          P1_0 = 1;
+ 126   2          P1_1 = 1;
+ 127   2          P1_2 = 0;
+ 128   2          P1_3 = 0;
+ 129   2          break;
+ 130   2      case 2: //1
+ 131   2          P1_0 = 0;
+ 132   2          P1_1 = 1;
+ 133   2          P1_2 = 0;
+ 134   2          P1_3 = 0;
+ 135   2          break;
+ 136   2      case 3: //1、2
+ 137   2          P1_0 = 0;
+ 138   2          P1_1 = 1;
+ 139   2          P1_2 = 1;
+ 140   2          P1_3 = 0;
+ 141   2          break;
+ 142   2      case 4: //2
+ 143   2          P1_0 = 0;
+ 144   2          P1_1 = 0;
+ 145   2          P1_2 = 1;
+ 146   2          P1_3 = 0;
+ 147   2          break;
+ 148   2      case 5: //2、3
+ 149   2          P1_0 = 0;
+ 150   2          P1_1 = 0;
+ 151   2          P1_2 = 1;
+ 152   2          P1_3 = 1;
+ 153   2          break;
+ 154   2      case 6: //3
+ 155   2          P1_0 = 0;
+ 156   2          P1_1 = 0;
+ 157   2          P1_2 = 0;
+ 158   2          P1_3 = 1;
+ 159   2          break;
+ 160   2      case 7: //3、0
+ 161   2          P1_0 = 1;
+ 162   2          P1_1 = 0;
+ 163   2          P1_2 = 0;
+ 164   2          P1_3 = 1;
+ 165   2      }
+ 166   1      
+ 167   1      if (turn==0)
+ 168   1      {
+ 169   2          step_index++;
+ 170   2          if (step_index>7)
+ 171   2            step_index=0;
+ 172   2      }
+ 173   1      else
+ 174   1      {
+ 175   2          step_index--;
+ 176   2          if (step_index<0)
+ 177   2            step_index=7;
+ 178   2      }
+ 179   1          
+C51 COMPILER V7.00  _阓_________数                                                         10/24/2009 22:51:51 PAGE 4   
+
+ 180   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    398    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     13    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

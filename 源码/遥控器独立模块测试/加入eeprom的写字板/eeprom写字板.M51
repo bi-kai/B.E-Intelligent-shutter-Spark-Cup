@@ -1,0 +1,43 @@
+BL51 BANKED LINKER/LOCATER V5.00                                                        11/09/2009  21:23:35  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V5.00, INVOKED BY:
+C:\KEIL\C51\BIN\BL51.EXE 实验eeprom.obj TO eeprom写字板 RAMSIZE (256)
+
+
+MEMORY MODEL: SMALL
+
+
+INPUT MODULES INCLUDED:
+  实验eeprom.obj (实_镋EPROM)
+
+
+LINK MAP OF MODULE:  eeprom写字板 (实_镋EPROM)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+
+
+OVERLAY MAP OF MODULE:   eeprom写字板 (实_镋EPROM)
+
+
+SEGMENT
+  +--> CALLED SEGMENT
+---------------------
+
+
+SYMBOL TABLE OF MODULE:  eeprom写字板 (实_镋EPROM)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+
+  -------         MODULE        实_镋EPROM
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  -------         ENDMOD        实_镋EPROM
+
+*** WARNING L10: CANNOT DETERMINE ROOT SEGMENT
+
+Program Size: data=0.0 xdata=0 code=0
+LINK/LOCATE RUN COMPLETE.  1 WARNING(S),  0 ERROR(S)

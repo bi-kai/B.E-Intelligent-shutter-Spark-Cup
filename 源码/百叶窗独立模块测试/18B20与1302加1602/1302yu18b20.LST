@@ -1,0 +1,977 @@
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 1   
+
+
+C51 COMPILER V7.00, COMPILATION OF MODULE 1302YU18B20
+OBJECT MODULE PLACED IN 1302yu18b20.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE 1302yu18b20.c BROWSE DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          /*============================================================
+   2          使用1602液晶显示DS1302+s52时钟
+   3          [注:AT89s52使用12M晶振]
+   4          =============================================================*/
+   5          
+   6          #include <AT89x51.h>
+   7          #include <string.h>
+   8          
+   9          #define LCM_RW P2_3 //定义引脚
+  10          #define LCM_RS P2_2
+  11          #define LCM_E P2_4
+  12          #define LCM_Data P0
+  13          #define Busy 0x80          //用于检测LCM状态字中的Busy标识
+  14          #define uchar unsigned char
+  15           
+  16          
+  17          sbit T_CLK=P1^7;
+  18          sbit T_IO =P2^7;
+  19          sbit T_RST=P3^2;
+  20          sbit ACC0=ACC^0;
+  21          sbit ACC7=ACC^7;
+  22          sbit LED=P1^6;//*********        //背光灯输出 (因本实验板无此功能 所以此项功能无效)
+  23          sbit system=P1^2;                //模式
+  24          sbit TimerUp=P1^1;               //时间加
+  25          sbit TimerDown=P1^0;     //时间减
+  26          sbit Speaker=P1^3;       //蜂鸣器
+  27          
+  28          
+  29          void   Set(uchar,uchar);      //根据选择调整相应项目
+  30          void   RTInputByte(uchar);    //输入 1Byte */
+  31          uchar  RTOutputByte(void);    //输出 1Byte */
+  32          void   W1302(uchar, uchar);   //向DS1302写入一个字节
+  33          uchar  R1302(uchar);          //从DS1302读出一个字节
+  34          void   Set1302(uchar * );     //设置时间
+  35          void   KeySound();                        //按键音
+  36          void   ClockSound();              //闹铃蜂鸣声
+  37          
+  38          
+  39          uchar id,msec,model,LedTime,d;
+  40          bit a,b;                          //闪烁标志位
+  41          
+  42          
+  43          uchar inittime[7]={0x00,0x10,0x19,0x29,0x03,0x04,0x06}; //初始化后设置为：06年3月29日星期3 19点10分0秒
+  44          void  Out_LCM(void);     //显示屏幕
+  45          void  model0(void);                                                //显示输出
+  46          void  model1(void);
+  47          void  model2(void);
+  48          void  model3(void);
+  49          void  model4(void);
+  50          void  model5(void);
+  51          void  model6(void);
+  52          
+  53          
+  54          void  id_case1_key();   //项目调整
+  55          void  Modset();          //模式键处理
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 2   
+
+  56          
+  57          void  WriteDataLCM(uchar WDLCM);
+  58          void  WriteCommandLCM(uchar WCLCM,BuysC);
+  59          uchar ReadStatusLCM(void);
+  60          void  LCMInit(void);
+  61          void  OutputInformation(uchar X, uchar Y, uchar DData);
+  62          void  DisplayListChar(uchar X, uchar Y, uchar code *DData);
+  63          
+  64          void  Delay5Ms(void);
+  65          void  Delay400Ms(void);
+  66          void  systemsetup(void);                 //进入系统设置
+  67          
+  68          uchar code systemp[]={"System.setup"};  //字符串输出(系统设定)
+  69          uchar code TIMER[]={"Time"};            //字符串输出(时间)
+  70          uchar code DATE[]={"Date"};                 //字符串输出(日期)
+  71          uchar code alarmclock[]={"Clock"};      //字符串输出（闹铃）
+  72          uchar code lamp[]={"Lamp"};                         //字符串输出（背光灯）
+  73          uchar code reset[]={"Reset"};               //字符串输出（时间归零）
+  74          uchar code exit[]={"Exit"};             //字符串输出（退出）
+  75          uchar code set[]={"Set"};                               //字符串输出（设置）
+  76          uchar code sec[]={"sec"};               //字符串输出（秒）
+  77          uchar code ClockSet[]={"ClockSet"};             //字符串输出（闹铃设置）
+  78          uchar code ClockOn[]={"ON"};                //字符串输出（ON）
+  79          uchar code ClockOff[]={"OFF"};              //字符串输出（OFF）
+  80          
+  81          void  timesetup(void);                   //时间设置
+  82          void  datesetup(void);                   //日期设置
+  83          void  alarmclockset(void);               //闹铃设置
+  84          void  lampsetup(void);                   //背光灯设置
+  85          void  timereset(void);                   //时间清零
+  86          
+  87          void main(void)
+  88          {
+  89   1        Speaker=1;    //关闭蜂鸣器
+  90   1        LED=0;        //打开LED ,低电平有效，外接9012驱动
+  91   1        Delay400Ms(); //启动等待，等LCM讲入工作状态
+  92   1        LCMInit();    //LCM初始化
+  93   1        TMOD=0x01;    //16位定时
+  94   1        TH0=0x3c;             //50ms
+  95   1        TL0=0xb0;
+  96   1        EA=1;
+  97   1        TR0=1;
+  98   1        ET0=1;
+  99   1      
+ 100   1        while(1)
+ 101   1        {
+ 102   2           if(TimerDown==0)         //左移键按下后把背光灯打开
+ 103   2            {Delay5Ms();
+ 104   3            if(TimerDown==0)
+ 105   3                 {KeySound();                   //蜂鸣声
+ 106   4                      LED=0;                            //打开背光灯
+ 107   4                  LedTime=R1302(0xc1)/16*10+R1302(0xc1)%16;} //取出背光灯时间并转换为十进制数
+ 108   3             }
+ 109   2               b=1;                             //模式键是否动作标志。为1时不动作，为0时动作。
+ 110   2               Modset();                        //调用模式键处理程序判断按键是否按下。
+ 111   2               if(b==0)
+ 112   2                {
+ 113   3                 KeySound();                    //蜂鸣声
+ 114   3                 LED=0;                 //打开背光灯
+ 115   3                 systemsetup();         //进入系统设置模式
+ 116   3                 LedTime=R1302(0xc1)/16*10+R1302(0xc1)%16; //取出背光灯时间并转换为十进制数
+ 117   3                 }
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 3   
+
+ 118   2               if((LED==0)&&LedTime==0)  //延时间是否到
+ 119   2                  LED=1;                 //关闭背光灯
+ 120   2               if(R1302(0xc3)==1)        //闹铃是否打开，0xc3为读闹铃寄存器地址。
+ 121   2                 {if((R1302(0x85)==R1302(0xc5))&&(R1302(0x83)==R1302(0xc7))) //判断闹铃时间是否到，
+ 122   3                        ClockSound();            //发出闹铃蜂鸣声，无按键动作蜂鸣一分钟。
+ 123   3                      }
+ 124   2               model0();                //输出显示屏幕
+ 125   2              }
+ 126   1      }
+ 127          
+ 128          void KeySound()                         //按键音
+ 129          {
+ 130   1       Speaker=0;                                         //开蜂鸣声
+ 131   1       Delay5Ms();
+ 132   1       Speaker=1;                                         //关蜂鸣声
+ 133   1       }
+ 134          void ClockSound()                       //闹铃蜂鸣声
+ 135          {
+ 136   1       if(a==0)
+ 137   1        {
+ 138   2         Speaker=0;                                   //开蜂鸣声
+ 139   2         Delay5Ms();
+ 140   2         Delay5Ms();
+ 141   2         Delay5Ms();
+ 142   2         Speaker=1;                               //关蜂鸣声
+ 143   2        }
+ 144   1      }
+ 145          
+ 146          void Modset()                   //模式键处理
+ 147          { if(system==0)
+ 148   1         {
+ 149   2          Delay5Ms();
+ 150   2          if(system==0)
+ 151   2               {while(system==0);
+ 152   3                 KeySound();                    //蜂鸣声
+ 153   3                 a=0;msec=0;b=0;                //a、msec为闪烁标志，按键有动作时清零，不闪烁。
+ 154   3               }                                                //b为模式键确认动作。其它程判断b是否为零时来确定模式键是否动作。
+ 155   2         }
+ 156   1      }
+ 157          
+ 158          void systemsetup(void)              //系统设置
+ 159          {
+ 160   1        model=1;
+ 161   1        while(model!=0)
+ 162   1        {
+ 163   2        Out_LCM();
+ 164   2        if (TimerUp==0)             //设置项目左移
+ 165   2            {Delay5Ms();
+ 166   3             if(TimerUp==0)
+ 167   3                 {a=0;msec=0;KeySound();//蜂鸣声
+ 168   4                  if(model--==1)            //6种系统设置项目
+ 169   4                       model=6;
+ 170   4                      }
+ 171   3             while(TimerUp==0);
+ 172   3            }
+ 173   2         if (TimerDown==0)         //设置项目右移
+ 174   2            {
+ 175   3             Delay5Ms();
+ 176   3             if(TimerDown==0)
+ 177   3                   {a=0;msec=0;KeySound();//蜂鸣声
+ 178   4                       if(model++==6)
+ 179   4                           model=1;
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 4   
+
+ 180   4                       }
+ 181   3             while(TimerDown==0);
+ 182   3            }
+ 183   2           b=1;                       //模式键是否动作标志。为1时不动作，为0时动作。
+ 184   2               Modset();              //调用模式键处理程序判断按键是否按下。
+ 185   2               if(b==0)
+ 186   2                 {KeySound();                    //蜂鸣声
+ 187   3                  switch(model)          //进入进个项目设置
+ 188   3                        {
+ 189   4                         case 1:
+ 190   4                              timesetup(); break;   //时间设置
+ 191   4                         case 2:
+ 192   4                              datesetup();break;    //日期设置
+ 193   4                         case 3:
+ 194   4                              alarmclockset();break;//闹铃设置
+ 195   4                         case 4:
+ 196   4                              lampsetup();break;        //背光灯设置
+ 197   4                     case 5:
+ 198   4                              timereset();break;    //时间清零
+ 199   4                         case 6:
+ 200   4                              model=0;break;        //退出系统设置
+ 201   4                        }
+ 202   3                }
+ 203   2         }
+ 204   1       }
+ 205          
+ 206          
+ 207          void timesetup()                //时间调整
+ 208          {
+ 209   1       id=6;
+ 210   1       while(model==1)                                //model为1时进入时间调整
+ 211   1        {
+ 212   2          b=1;
+ 213   2          Modset();
+ 214   2              if(b==0)
+ 215   2               {KeySound();                        //蜂鸣声
+ 216   3                if(id++==9)                       //6..9为时分秒调。                             .
+ 217   3                 id=6;
+ 218   3                }
+ 219   2         id_case1_key();                              //调用按键处理
+ 220   2         Out_LCM();                   //显示输出
+ 221   2       }
+ 222   1      }
+ 223          void datesetup()                //对日期进行调整
+ 224          {
+ 225   1       id=1;
+ 226   1       while(model==2)                                //model为2时进入日期调整
+ 227   1        {b=1;
+ 228   2         Modset();                                    //模式键是否动作
+ 229   2         if(b==0)
+ 230   2          {KeySound();                            //蜂鸣声
+ 231   3               if(id++==5)                        //1..5为年月日星期 exit
+ 232   3                id=1;
+ 233   3               }
+ 234   2       id_case1_key();                        //日期调整
+ 235   2       Out_LCM();                     //显示输出
+ 236   2       }
+ 237   1      }
+ 238          void alarmclockset(void)            //闹铃调整
+ 239          {id=12;
+ 240   1       while(model==3)                            //进入闹铃设置
+ 241   1        {b=1;
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 5   
+
+ 242   2         Modset();                                //模式键是否动作
+ 243   2         if(b==0)
+ 244   2          {KeySound();                            //蜂鸣声
+ 245   3               if(R1302(0xc3)%16==0)
+ 246   3                 {id=0;model++;}          //0xc2为闹铃开关寄存器。当为关时按下模式键时将退出闹铃设置，当开时进入闹铃时
+             -间设置
+ 247   3      
+ 248   3               else if(id++==15)                  //12..15为闹铃开关和时间设置 exit
+ 249   3                    id=12;
+ 250   3          }
+ 251   2        id_case1_key();                       //调整
+ 252   2        Out_LCM();                    //显示输出
+ 253   2        }
+ 254   1      }
+ 255          
+ 256          void lampsetup(void)            //背光灯时间设置
+ 257          {id=10;                                                 //背光灯存储空间DS1302(0xc0)
+ 258   1        while(model==4)                               //model为3时进入背光灯调整
+ 259   1        {b=1;
+ 260   2         Modset();                                    //模式键是否动作
+ 261   2         if(b==0)
+ 262   2          {KeySound();                            //蜂鸣声
+ 263   3               if(id++==11)                       //10为背光灯 exit
+ 264   3                id=10;
+ 265   3               }
+ 266   2       id_case1_key();
+ 267   2       Out_LCM();                     //显示输出
+ 268   2       }
+ 269   1      
+ 270   1      }
+ 271          void  timereset()               //时间清零
+ 272          {
+ 273   1        Set1302(inittime);                //清时间
+ 274   1        W1302(0x90,0xa5);             //打开充电二级管  一个二级管串联一个2K电阻
+ 275   1        model++;
+ 276   1      }
+ 277          //对相应的项目进行加、减调整。
+ 278          void id_case1_key()                             //按键处理
+ 279          {
+ 280   1        if (TimerUp==0)        //增加
+ 281   1            {
+ 282   2             Delay5Ms();
+ 283   2             if(TimerUp==0)
+ 284   2                  {a=0;msec=0;KeySound();                     //蜂鸣声
+ 285   3                       if((id==9)||(id==5)||(id==11)||(id==15))       //当ID为9、5时按下加、减键将退出调整
+ 286   3                        { model++;                        //退出时间、日期设置
+ 287   4                          id=0;
+ 288   4                        }
+ 289   3                       else
+ 290   3                     Set(id,1);
+ 291   3                      }
+ 292   2            while(TimerUp==0);
+ 293   2           }
+ 294   1        if (TimerDown==0)  //减少
+ 295   1           {
+ 296   2             Delay5Ms();
+ 297   2             if(TimerDown==0)
+ 298   2                  {a=0;msec=0;KeySound();                      //蜂鸣声
+ 299   3                       if((id==9)||(id==5)||(id==11)||(id==15))  //当ID为9、5时按下加、减键将退出调整
+ 300   3                        { model++;                         //退出时间、日期设置
+ 301   4                          id=0;
+ 302   4                        }
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 6   
+
+ 303   3                 else
+ 304   3                         Set(id,0);             //调用DS1302写入函数
+ 305   3                 }
+ 306   2            while(TimerDown==0);
+ 307   2           }
+ 308   1      }
+ 309          
+ 310          void timer_1(void) interrupt 1  //中断入口，闪烁
+ 311          {
+ 312   1        TH0=0x3c;            //50ms定时
+ 313   1        TL0=0xb0;
+ 314   1        if(msec++==10)           //500ms
+ 315   1         {msec=0;a=~a;       //闪烁标志反转
+ 316   2              if(a==0)                   //1秒后背光时间减一秒。
+ 317   2               LedTime--;
+ 318   2         }
+ 319   1      }
+ 320          
+ 321          //根据选择调整相应项目并写入DS1302
+ 322          void Set(uchar sel,uchar sel_1)
+ 323          {
+ 324   1        uchar address,item;
+ 325   1        uchar max,min;
+ 326   1        if(sel==1)  {address=0x8c; max=99;min=0;}    //年
+ 327   1        if(sel==2)  {address=0x88; max=12;min=1;}    //月
+ 328   1        if(sel==3)  {address=0x86; max=31;min=1;}    //日
+ 329   1        if(sel==4)  {address=0x8a; max=7; min=1;}    //星期
+ 330   1        if(sel==6)  {address=0x84; max=23;min=0;}    //小时
+ 331   1        if(sel==7)  {address=0x82; max=59;min=0;}    //分钟
+ 332   1        if(sel==8)  {address=0x80; max=59;min=0;}    //秒
+ 333   1        if(sel==10) {address=0xc0; max=59;min=0;}    //背光时间，最长1分钟
+ 334   1        if(sel==12) {address=0xc2; max=1;min=0;}     //闹铃开关寄存器
+ 335   1        if(sel==13) {address=0xc4; max=23;min=0;}    //闹铃时寄存器
+ 336   1        if(sel==14) {address=0xc6; max=59;min=0;}    //闹铃分寄存器
+ 337   1      
+ 338   1      
+ 339   1        item=R1302(address+1)/16*10+R1302(address+1)%16;
+ 340   1        if (sel_1==0) item++;  else item--;
+ 341   1        if(item>max) item=min;
+ 342   1        if(item<min) item=max;
+ 343   1      
+ 344   1        W1302(0x8e,0x00);                   //允许写操作
+ 345   1        W1302(address,item/10*16+item%10);  //写入DS1302 //转成BCD码
+ 346   1        W1302(0x8e,0x80);                   //写保护，禁止写操作
+ 347   1      }
+ 348          
+ 349          //屏幕显示
+ 350          void Out_LCM(void)
+ 351          { switch(model)
+ 352   1         {
+ 353   2          case 0: model0(); break;
+ 354   2              case 1: model1(); break;
+ 355   2              case 2: model2(); break;                   //在不同的条件下显示不同的字符
+ 356   2              case 3: model3(); break;
+ 357   2              case 4: model4(); break;
+ 358   2              case 5: model5(); break;
+ 359   2              case 6: model6(); break;
+ 360   2         }
+ 361   1      }
+ 362          
+ 363          /***********************model为零时第一行显示时间，不为零时显示system setup******/
+ 364          void model0()
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 7   
+
+ 365            {
+ 366   1         DisplayListChar(0,0,TIMER);   //显示固定字符串（Time)
+ 367   1         OutputInformation(13,0,0x20); //不显示
+ 368   1         OutputInformation(4,0,0x20);  //不显示
+ 369   1         OutputInformation(4,1,0x20);  //不显示
+ 370   1         OutputInformation(15,1,0x20); //不显示
+ 371   1         OutputInformation(7,1,0x2f);  //显示固定字符 "/"
+ 372   1         OutputInformation(10,1,0x2f); //显示固定字符 "/"
+ 373   1         OutputInformation(13,1,0x2f); //显示固定字符 "/"
+ 374   1         DisplayListChar(0,1,DATE);    //显示固定字符串Date(日期）
+ 375   1         if(a==1)                                      //冒号闪烁
+ 376   1          {OutputInformation(7,0,0x3a); OutputInformation(10,0,0x3a);}
+ 377   1         else
+ 378   1          {OutputInformation(7,0,0x20); OutputInformation(10,0,0x20);}
+ 379   1      
+ 380   1       /*******************model为零时第二行显示日期，不为零显示设置项目*******/
+ 381   1      
+ 382   1              OutputInformation(5,1,R1302(0x8d)/16+0x30);  //显示年
+ 383   1          OutputInformation(6,1,R1302(0x8d)%16+0x30);
+ 384   1      
+ 385   1          OutputInformation(8,1,R1302(0x89)/16+0x30);  //显示月
+ 386   1          OutputInformation(9,1,R1302(0x89)%16+0x30);
+ 387   1      
+ 388   1          OutputInformation(11,1,R1302(0x87)/16+0x30); //显示日
+ 389   1          OutputInformation(12,1,R1302(0x87)%16+0x30);
+ 390   1      
+ 391   1          OutputInformation(14,1,R1302(0x8b)%16+0x30); //显示星期
+ 392   1      
+ 393   1          OutputInformation(5,0,R1302(0x85)/16+0x30);  //显示小时
+ 394   1          OutputInformation(6,0,R1302(0x85)%16+0x30);
+ 395   1      
+ 396   1          OutputInformation(8,0,R1302(0x83)/16+0x30);  //显示分钟
+ 397   1          OutputInformation(9,0,R1302(0x83)%16+0x30);
+ 398   1      
+ 399   1          OutputInformation(11,0,R1302(0x81)/16+0x30); //显示秒
+ 400   1          OutputInformation(12,0,R1302(0x81)%16+0x30);
+ 401   1      }
+ 402          
+ 403          /*************************model不为零时显示系统设置***********************************/
+ 404          
+ 405          
+ 406          
+ 407                                                                    //model为1时time闪烁，按下模式键后进入时间调整
+ 408          void model1()
+ 409                   /*************************************判断ID的值来显示项目***********************/
+ 410          {        OutputInformation(0,0,0x20);          //不显示
+ 411   1           OutputInformation(1,0,0x20);
+ 412   1           DisplayListChar(2,0,systemp);         //第一行显示system setup
+ 413   1            if(id==0)                                                    //为0时显示TIME  date lalcak
+ 414   1                       {OutputInformation(9,1,0x20);     //不显示
+ 415   2                    OutputInformation(4,1,0x20);     //不显示
+ 416   2                        OutputInformation(15,1,0x20);    //不显示
+ 417   2                        DisplayListChar(5,1,DATE);       //显示date
+ 418   2                        DisplayListChar(10,1,alarmclock);//显示lalcak
+ 419   2      
+ 420   2                        if(a==1)
+ 421   2                       {OutputInformation(0,1,0x20);     //不显示
+ 422   3                        OutputInformation(1,1,0x20);     //不显示
+ 423   3                            OutputInformation(2,1,0x20);     //不显示
+ 424   3                                OutputInformation(3,1,0x20);     //不显示
+ 425   3                           }
+ 426   2                    else
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 8   
+
+ 427   2                      DisplayListChar(0,1,TIMER);       //显示time
+ 428   2                       }
+ 429   1                else
+ 430   1                 {                                                                                         //id不为零进入时间调整项目
+ 431   2                         OutputInformation(3,1,0x3a);                  //显示固定字符 ":"
+ 432   2                 OutputInformation(6,1,0x3a);                  //显示固定字符 ":"
+ 433   2                 OutputInformation(9,1,0x20);                  //不显示
+ 434   2                         OutputInformation(10,1,0x20);                 //不显示
+ 435   2                         OutputInformation(0,1,0x20);                  //不显示
+ 436   2         /****************************时显示闪烁控制********************/
+ 437   2                         if((id==6)&&(a==1))                                           //id为5时时闪烁
+ 438   2                      {
+ 439   3                           OutputInformation(1,1,0x20); //不显示
+ 440   3                               OutputInformation(2,1,0x20); //不显示
+ 441   3                              }
+ 442   2                 else
+ 443   2                              {OutputInformation(1,1,R1302(0x85)/16+0x30); //显示时
+ 444   3                   OutputInformation(2,1,R1302(0x85)%16+0x30);
+ 445   3                              }
+ 446   2        /******************************分显示闪烁控制********************/
+ 447   2                        if((id==7)&&(a==1))                                            //id为6时分闪烁
+ 448   2                      {
+ 449   3                           OutputInformation(4,1,0x20); //不显示
+ 450   3                               OutputInformation(5,1,0x20); //不显示
+ 451   3                              }
+ 452   2                        else
+ 453   2                               {OutputInformation(4,1,R1302(0x83)/16+0x30); //显示分
+ 454   3                    OutputInformation(5,1,R1302(0x83)%16+0x30);
+ 455   3                               }
+ 456   2        /******************************秒显示闪烁控制********************/
+ 457   2                        if((id==8)&&(a==1))                                            //id为7时秒闪烁
+ 458   2                      {
+ 459   3                           OutputInformation(7,1,0x20); //不显示
+ 460   3                               OutputInformation(8,1,0x20); //不显示
+ 461   3                               }
+ 462   2                              else
+ 463   2                               {OutputInformation(7,1,R1302(0x81)/16+0x30); //显示秒
+ 464   3                    OutputInformation(8,1,R1302(0x81)%16+0x30);
+ 465   3                               }
+ 466   2        /*******************************Exit显示闪烁控制********************/
+ 467   2      
+ 468   2                        if((id==9)&&(a==1))               //id为8时exit闪烁
+ 469   2                               {OutputInformation(11,1,0x20);     //不显示
+ 470   3                        OutputInformation(12,1,0x20);     //不显示
+ 471   3                            OutputInformation(13,1,0x20);     //不显示
+ 472   3                                OutputInformation(14,1,0x20);     //不显示
+ 473   3                           }
+ 474   2                        else
+ 475   2                            DisplayListChar(11,1,exit);       //显示exit
+ 476   2                      }
+ 477   1      }
+ 478          /***************************************modelo为2时date闪烁***********************************************
+             -/
+ 479          void model2()
+ 480          {
+ 481   1                if(id==0)
+ 482   1                 {OutputInformation(9,1,0x20);        //不显示
+ 483   2                  OutputInformation(4,1,0x20);        //不显示
+ 484   2                      OutputInformation(15,1,0x20);       //不显示
+ 485   2                      DisplayListChar(0,1,TIMER);             //显示time
+ 486   2                  DisplayListChar(10,1,alarmclock);   //显示clock
+ 487   2                  if(a==1)
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 9   
+
+ 488   2                       {OutputInformation(5,1,0x20);     //不显示
+ 489   3                    OutputInformation(6,1,0x20);     //不显示
+ 490   3                        OutputInformation(7,1,0x20);     //不显示
+ 491   3                        OutputInformation(8,1,0x20);     //不显示
+ 492   3                       }
+ 493   2      
+ 494   2                 else
+ 495   2                   DisplayListChar(5,1,DATE);         //显示date
+ 496   2                 }
+ 497   1      /*****************************************************************************************************/
+ 498   1                                                              //id不为零时、进入日期调整
+ 499   1      /*****************************************************************************************************/
+ 500   1                else
+ 501   1                 { OutputInformation(0,1,0x20);                  //不显示
+ 502   2                       OutputInformation(11,1,0x20);                 //不显示
+ 503   2                   OutputInformation(3,1,0x2f);                  //显示固定字符 "/"
+ 504   2               OutputInformation(6,1,0x2f);                  //显示固定字符 "/"
+ 505   2               OutputInformation(9,1,0x2f);                  //显示固定字符 "/"
+ 506   2         /****************************年显示闪烁控制********************/
+ 507   2                       if((id==1)&&(a==1))                                               //id为1时年闪烁
+ 508   2                    {
+ 509   3                         OutputInformation(1,1,0x20);                //不显示
+ 510   3                         OutputInformation(2,1,0x20);                //不显示
+ 511   3                        }
+ 512   2                       else
+ 513   2                        {OutputInformation(1,1,R1302(0x8d)/16+0x30); //显示年
+ 514   3                 OutputInformation(2,1,R1302(0x8d)%16+0x30);
+ 515   3                        }
+ 516   2         /***************************月闪烁控制************************/
+ 517   2                       if((id==2)&&(a==1))                                               //id为2时月闪烁
+ 518   2                    {
+ 519   3                         OutputInformation(4,1,0x20);                //不显示
+ 520   3                         OutputInformation(5,1,0x20);                //不显示
+ 521   3                        }
+ 522   2                       else
+ 523   2                        {OutputInformation(4,1,R1302(0x89)/16+0x30); //显示月
+ 524   3                 OutputInformation(5,1,R1302(0x89)%16+0x30);
+ 525   3                        }
+ 526   2        /***************************日闪烁控制************************/
+ 527   2                       if((id==3)&&(a==1))                                               //id为2日闪烁
+ 528   2                    {
+ 529   3                         OutputInformation(7,1,0x20);                //不显示
+ 530   3                         OutputInformation(8,1,0x20);                //不显示
+ 531   3                        }
+ 532   2                       else
+ 533   2                        {OutputInformation(7,1,R1302(0x87)/16+0x30); //显示日
+ 534   3                 OutputInformation(8,1,R1302(0x87)%16+0x30);
+ 535   3                        }
+ 536   2        /***************************星期闪烁控制*********************************/
+ 537   2                       if((id==4)&&(a==1))                                               //id为2时星期闪烁
+ 538   2                    {
+ 539   3                         OutputInformation(10,1,0x20);                //不显示
+ 540   3                        }
+ 541   2                       else
+ 542   2                        {OutputInformation(10,1,R1302(0x8b)%16+0x30); //显示星期
+ 543   3                        }
+ 544   2        /**************************exit闪烁控制*********************************/
+ 545   2                       if((id==5)&&(a==1))                                                //id为5时exit闪烁
+ 546   2                     { OutputInformation(12,1,0x20);     //不显示
+ 547   3                       OutputInformation(13,1,0x20);     //不显示
+ 548   3                           OutputInformation(14,1,0x20);     //不显示
+ 549   3                               OutputInformation(15,1,0x20);     //不显示
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 10  
+
+ 550   3                           }
+ 551   2                       else
+ 552   2                         DisplayListChar(12,1,exit);                  //显示exit
+ 553   2                 }
+ 554   1      }
+ 555          /*********************************************************************************/
+ 556          
+ 557                                                                          /*model为3时进入闹铃项目
+ 558          
+ 559          /**********************************************************************************/
+ 560          void model3()
+ 561          {
+ 562   1            if(id==0)
+ 563   1                 {OutputInformation(9,1,0x20);        //不显示
+ 564   2                  OutputInformation(4,1,0x20);        //不显示
+ 565   2                      OutputInformation(15,1,0x20);       //不显示
+ 566   2              DisplayListChar(0,1,TIMER);             //显示time
+ 567   2                  DisplayListChar(5,1,DATE);          //显示date
+ 568   2                  if(a==1)
+ 569   2                       { OutputInformation(10,1,0x20);     //不显示
+ 570   3                     OutputInformation(11,1,0x20);     //不显示
+ 571   3                         OutputInformation(12,1,0x20);     //不显示
+ 572   3                         OutputInformation(13,1,0x20);     //不显示
+ 573   3                         OutputInformation(14,1,0x20);
+ 574   3                       }
+ 575   2                  else
+ 576   2                   DisplayListChar(10,1,alarmclock);  //显示cloak
+ 577   2                 }
+ 578   1      
+ 579   1      /**************************id不为零进入闹铃设置显示********************/
+ 580   1               else
+ 581   1               {if(id==12)                                               //闹铃开关显示
+ 582   2                 {DisplayListChar(0,1,ClockSet);         //显示ClockSet
+ 583   3                      OutputInformation(8,1,0x20);
+ 584   3                      OutputInformation(13,1,0x20);
+ 585   3                      OutputInformation(14,1,0x20);
+ 586   3      /*****************************闹铃开关显示********************************/
+ 587   3                  if(a==1)                                                       //A为闪烁标志
+ 588   3                    {OutputInformation(10,1,0x20);     //不显示
+ 589   4                     OutputInformation(11,1,0x20);     //不显示
+ 590   4                         OutputInformation(12,1,0x20);     //不显示
+ 591   4                         OutputInformation(13,1,0x20);     //不显示
+ 592   4                        }
+ 593   3                  else
+ 594   3                   {
+ 595   4                    if(R1302(0xc3)%16==0)            //闹铃寄存器的值是否为零（关）
+ 596   4                              {DisplayListChar(10,1,ClockOff);}//显示OFF
+ 597   4                        else
+ 598   4                          {OutputInformation(9,1,0x20);    //不显示
+ 599   5                               OutputInformation(12,1,0x20);   //不显示
+ 600   5                       OutputInformation(13,1,0x20);   //不显示
+ 601   5                           OutputInformation(14,1,0x20);   //不显示
+ 602   5                               OutputInformation(15,1,0x20);   //不显示
+ 603   5                               DisplayListChar(10,1,ClockOn);  //显示ON
+ 604   5                              }
+ 605   4                       }
+ 606   3                 }
+ 607   2               else
+ 608   2                 {DisplayListChar(0,1,alarmclock);   //显示clock
+ 609   3                  OutputInformation(8,1,0x3a);       //显示固定字符 ":"
+ 610   3                      OutputInformation(5,1,0x20);       //不显示
+ 611   3                      OutputInformation(11,1,0x20);      //不显示
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 11  
+
+ 612   3      /**************************闹铃时闪烁显示**********************/
+ 613   3                  if((id==13)&&(a==1))                           //闹铃时闪烁
+ 614   3                        {
+ 615   4                         OutputInformation(6,1,0x20);
+ 616   4                         OutputInformation(7,1,0x20);
+ 617   4                        }
+ 618   3                      else
+ 619   3                        {OutputInformation(6,1,R1302(0xc5)/16+0x30); //显示闹铃时
+ 620   4                         OutputInformation(7,1,R1302(0xc5)%16+0x30); //显示闹铃时
+ 621   4                        }
+ 622   3      
+ 623   3      /**************************闹铃分闪烁显示*******************/
+ 624   3                      if((id==14)&&(a==1))               //闹铃分闪烁
+ 625   3                       {OutputInformation(9,1,0x20);     //不显示
+ 626   4                        OutputInformation(10,1,0x20);    //不显示
+ 627   4      
+ 628   4                       }
+ 629   3                      else
+ 630   3                        {OutputInformation(9,1,R1302(0xc7)/16+0x30);  //显示闹铃分
+ 631   4                         OutputInformation(10,1,R1302(0xc7)%16+0x30); //显示闹铃分
+ 632   4                        }
+ 633   3      
+ 634   3      /************************exit闪烁显示***********************/
+ 635   3                      if((id==15)&&(a==1))                       //exie闪烁
+ 636   3                        {OutputInformation(12,1,0x20);   //不显示
+ 637   4                     OutputInformation(13,1,0x20);   //不显示
+ 638   4                         OutputInformation(14,1,0x20);   //不显示
+ 639   4                         OutputInformation(15,1,0x20);   //不显示
+ 640   4                        }
+ 641   3                      else
+ 642   3                        DisplayListChar(12,1,exit);      //显示exit
+ 643   3                 }
+ 644   2               }
+ 645   1      }
+ 646          
+ 647          /*********************************背光灯设置*****************************************/
+ 648          void model4()
+ 649          {
+ 650   1                if(id==0)                                                             //id为零未进入背光灯设置
+ 651   1                 {OutputInformation(10,1,0x20);       //不显示
+ 652   2                  OutputInformation(11,1,0x20);       //不显示
+ 653   2                  OutputInformation(4,1,0x20);        //不显示
+ 654   2                      DisplayListChar(5,1,reset);         //显示reset
+ 655   2                      DisplayListChar(12,1,exit);         //显示exit
+ 656   2                      if(a==1)
+ 657   2                        {OutputInformation(0,1,0x20);     //不显示
+ 658   3                     OutputInformation(1,1,0x20);     //不显示
+ 659   3                         OutputInformation(2,1,0x20);     //不显示
+ 660   3                         OutputInformation(3,1,0x20);     //不显示
+ 661   3                         }
+ 662   2                      else
+ 663   2                DisplayListChar(0,1,lamp);        //显示lamp
+ 664   2                  }
+ 665   1               else                                                       //id不为零（10）进入背光灯时间设置
+ 666   1                 {DisplayListChar(0,1,lamp);          //显示lamp
+ 667   2                      DisplayListChar(4,1,set);           //显示set
+ 668   2                      DisplayListChar(9,1,sec);           //显示sec
+ 669   2                      DisplayListChar(12,1,exit);         //显示exit
+ 670   2                      if((id==10)&&(a==1))
+ 671   2                         {
+ 672   3                              OutputInformation(7,1,0x20);      //不显示
+ 673   3                  OutputInformation(8,1,0x20);}
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 12  
+
+ 674   2                      else
+ 675   2                        {
+ 676   3                         OutputInformation(7,1,R1302(0xc1)/16+0x30); //读出背光灯延时时间
+ 677   3                         OutputInformation(8,1,R1302(0xc1)%16+0x30);
+ 678   3                        }
+ 679   2                      if((id==11)&&(a==1))
+ 680   2                        {OutputInformation(12,1,0x20);     //不显示
+ 681   3                     OutputInformation(13,1,0x20);     //不显示
+ 682   3                         OutputInformation(14,1,0x20);     //不显示
+ 683   3                         OutputInformation(15,1,0x20);     //不显示
+ 684   3                        }
+ 685   2               }
+ 686   1      
+ 687   1      }
+ 688          /*********************************时间归零设置*****************************************/
+ 689          void model5()
+ 690          {
+ 691   1              OutputInformation(4,1,0x20);        //不显示
+ 692   1                  OutputInformation(10,1,0x20);       //不显示
+ 693   1                      OutputInformation(11,1,0x20);       //不显示
+ 694   1                  DisplayListChar(0,1,lamp);          //显示lamp
+ 695   1                  DisplayListChar(12,1,exit);         //显示exit
+ 696   1                      if(a==1)
+ 697   1                       { OutputInformation(5,1,0x20);     //不显示
+ 698   2                     OutputInformation(6,1,0x20);     //不显示
+ 699   2                         OutputInformation(7,1,0x20);     //不显示
+ 700   2                         OutputInformation(8,1,0x20);     //不显示
+ 701   2                         OutputInformation(9,1,0x20);
+ 702   2                       }
+ 703   1                      else
+ 704   1                DisplayListChar(5,1,reset);       //显示reset
+ 705   1      }
+ 706          /**********************************退出***********************************************/
+ 707          void model6()
+ 708          {
+ 709   1        OutputInformation(10,1,0x20);       //不显示
+ 710   1        OutputInformation(11,1,0x20);       //不显示
+ 711   1        DisplayListChar(0,1,lamp);          //显示lamp
+ 712   1        DisplayListChar(5,1,reset);         //显示reset
+ 713   1        if(a==1)
+ 714   1               {OutputInformation(12,1,0x20);   //不显示
+ 715   2                OutputInformation(13,1,0x20);   //不显示
+ 716   2                OutputInformation(14,1,0x20);   //不显示
+ 717   2                OutputInformation(15,1,0x20);   //不显示
+ 718   2               }
+ 719   1        else
+ 720   1           DisplayListChar(12,1,exit);      //显示exit
+ 721   1      }
+ 722          
+ 723          
+ 724          
+ 725          //********* LCM1602驱动程序 ***************
+ 726          //写数据
+ 727          void WriteDataLCM(uchar WDLCM)
+ 728          {
+ 729   1      while(ReadStatusLCM()); //检测忙
+ 730   1      LCM_Data = WDLCM;
+ 731   1      LCM_RS = 1;
+ 732   1      LCM_RW = 0;
+ 733   1      LCM_E = 0; //若晶振速度太高可以在这后加小的延时
+ 734   1      LCM_E = 0; //延时
+ 735   1      LCM_E = 1;
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 13  
+
+ 736   1      }
+ 737          //写指令
+ 738          void WriteCommandLCM(uchar WCLCM,BuysC)     //BuysC为0时忽略忙检测
+ 739           {
+ 740   1        if (BuysC) while(ReadStatusLCM()); //根据需要检测忙
+ 741   1        LCM_Data = WCLCM;
+ 742   1        LCM_RS = 0;
+ 743   1        LCM_RW = 0;
+ 744   1        LCM_E = 0;
+ 745   1        LCM_E = 0;
+ 746   1        LCM_E = 1;
+ 747   1       }
+ 748          //读状态
+ 749          uchar ReadStatusLCM(void)
+ 750           {
+ 751   1        LCM_RS = 0;
+ 752   1        LCM_RW = 1;
+ 753   1        LCM_E = 0;
+ 754   1        LCM_E = 0;
+ 755   1        LCM_E = 1;
+ 756   1       
+ 757   1        return(LCM_Data);
+ 758   1       }
+ 759          //LCM初始化
+ 760          void LCMInit(void)
+ 761           {
+ 762   1        LCM_Data = 0;
+ 763   1        WriteCommandLCM(0x38,0); //三次显示模式设置，不检测忙信号
+ 764   1        Delay5Ms();
+ 765   1        WriteCommandLCM(0x38,0);
+ 766   1        Delay5Ms();
+ 767   1        WriteCommandLCM(0x38,0);
+ 768   1        Delay5Ms();
+ 769   1        WriteCommandLCM(0x38,1); //显示模式设置,开始要求每次检测忙信号
+ 770   1        WriteCommandLCM(0x08,1); //关闭显示
+ 771   1        WriteCommandLCM(0x01,1); //显示清屏
+ 772   1        WriteCommandLCM(0x06,1); // 显示光标移动设置
+ 773   1        WriteCommandLCM(0x0C,1); // 显示开及光标设置
+ 774   1        Delay5Ms();
+ 775   1       }
+ 776          //按指定位置显示一个字符
+ 777          void OutputInformation(uchar X, uchar Y, uchar DData)
+ 778           {
+ 779   1        Y &= 0x1;
+ 780   1        X &= 0xF; //限制X不能大于15，Y不能大于1
+ 781   1        if (Y) X |= 0x40; //当要显示第二行时地址码+0x40;
+ 782   1        X |= 0x80; //算出指令码
+ 783   1        WriteCommandLCM(X, 0); //这里不检测忙信号，发送地址码
+ 784   1        WriteDataLCM(DData);
+ 785   1       }
+ 786          //按指定位置显示一串字符  ***原来的遇到空格0x20就不显示***
+ 787          void DisplayListChar(uchar X, uchar Y, uchar code *DData)
+ 788          {
+ 789   1        uchar ListLength,j;
+ 790   1        ListLength = strlen(DData);
+ 791   1        Y &= 0x1;
+ 792   1        X &= 0xF; //限制X不能大于15，Y不能大于1
+ 793   1            if (X <= 0xF) //X坐标应小于0xF
+ 794   1              {
+ 795   2               for(j=0;j<ListLength;j++)
+ 796   2                  {
+ 797   3                   OutputInformation(X, Y, DData[j]); //显示单个字符
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 14  
+
+ 798   3                   X++;
+ 799   3                  }
+ 800   2              }
+ 801   1      }
+ 802          //5ms延时
+ 803          void Delay5Ms(void)
+ 804           {
+ 805   1        unsigned int TempCyc = 5552;
+ 806   1        while(TempCyc--);
+ 807   1       }
+ 808          //400ms延时
+ 809          void Delay400Ms(void)
+ 810           {
+ 811   1        uchar TempCycA = 5;
+ 812   1        unsigned int TempCycB;
+ 813   1        while(TempCycA--)
+ 814   1        {
+ 815   2         TempCycB=7269;
+ 816   2         while(TempCycB--);
+ 817   2        }
+ 818   1       }
+ 819          
+ 820          //********DS1302读写程序***************//
+ 821          /********************************************************************
+ 822          函 数 名：RTInputByte()
+ 823          功    能：实时时钟写入一字节
+ 824          说    明：往DS1302写入1Byte数据 (内部函数)
+ 825          入口参数：d 写入的数据
+ 826          返 回 值：无
+ 827          ***********************************************************************/
+ 828          void RTInputByte(uchar d)
+ 829          {
+ 830   1          uchar i;
+ 831   1          ACC = d;
+ 832   1          for(i=8; i>0; i--)
+ 833   1          {
+ 834   2              T_IO = ACC0;           /*相当于汇编中的 RRC */
+ 835   2              T_CLK = 1;
+ 836   2              T_CLK = 0;
+ 837   2              ACC = ACC >> 1;
+ 838   2          }
+ 839   1      }
+ 840          /********************************************************************
+ 841          函 数 名：RTOutputByte()
+ 842          功    能：实时时钟读取一字节
+ 843          说    明：从DS1302读取1Byte数据 (内部函数)
+ 844          入口参数：无
+ 845          返 回 值：ACC
+ 846          设    计：          日    期：2002-03-19
+ 847          修    改：          日    期：
+ 848          ***********************************************************************/
+ 849          uchar RTOutputByte(void)
+ 850          {
+ 851   1          uchar i;
+ 852   1          for(i=8; i>0; i--)
+ 853   1          {
+ 854   2              ACC = ACC >>1;         /*相当于汇编中的 RRC */
+ 855   2              ACC7 = T_IO;
+ 856   2              T_CLK = 1;
+ 857   2              T_CLK = 0;
+ 858   2          }
+ 859   1          return(ACC);
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 15  
+
+ 860   1      }
+ 861          /********************************************************************
+ 862          函 数 名：W1302()
+ 863          功    能：往DS1302写入数据
+ 864          说    明：先写地址，后写命令/数据 (内部函数)
+ 865          调    用：RTInputByte() , RTOutputByte()
+ 866          入口参数：ucAddr: DS1302地址, ucData: 要写的数据
+ 867          返 回 值：无
+ 868          ***********************************************************************/
+ 869          void W1302(uchar ucAddr, uchar ucDa)
+ 870          {
+ 871   1          T_RST = 0;
+ 872   1          T_CLK = 0;
+ 873   1          T_RST = 1;
+ 874   1          RTInputByte(ucAddr);       /* 地址，命令 */
+ 875   1          RTInputByte(ucDa);       /* 写1Byte数据*/
+ 876   1          T_CLK = 1;
+ 877   1          T_RST = 0;
+ 878   1      }
+ 879          /********************************************************************
+ 880          函 数 名：R1302()
+ 881          功    能：读取DS1302某地址的数据
+ 882          说    明：先写地址，后读命令/数据 (内部函数)
+ 883          调    用：RTInputByte() , RTOutputByte()
+ 884          入口参数：ucAddr: DS1302地址
+ 885          返 回 值：ucData :读取的数据
+ 886          ***********************************************************************/
+ 887          uchar R1302(uchar ucAddr)
+ 888          {
+ 889   1          uchar ucData;
+ 890   1          T_RST = 0;
+ 891   1          T_CLK = 0;
+ 892   1          T_RST = 1;
+ 893   1          RTInputByte(ucAddr);             /* 地址，命令 */
+ 894   1          ucData = RTOutputByte();         /* 读1Byte数据 */
+ 895   1          T_CLK = 1;
+ 896   1          T_RST = 0;
+ 897   1          return(ucData);
+ 898   1      }
+ 899          
+ 900          /********************************************************************
+ 901          函 数 名：Set1302()
+ 902          功    能：设置初始时间
+ 903          说    明：先写地址，后读命令/数据(寄存器多字节方式)
+ 904          调    用：W1302()
+ 905          入口参数：pClock: 设置时钟数据地址 格式为: 秒 分 时 日 月 星期 年
+ 906                                         7Byte (BCD码)1B 1B 1B 1B 1B  1B  1B
+ 907          返 回 值：无
+ 908          ***********************************************************************/
+ 909          void Set1302(uchar *pClock)
+ 910          {
+ 911   1          uchar i;
+ 912   1          uchar ucAddr = 0x80;
+ 913   1          W1302(0x8e,0x00);           /* 控制命令,WP=0,写操作*/
+ 914   1          for(i =7; i>0; i--)
+ 915   1          {
+ 916   2              W1302(ucAddr,*pClock);  /* 秒 分 时 日 月 星期 年 */
+ 917   2              pClock++;
+ 918   2              ucAddr +=2;
+ 919   2          }
+ 920   1          W1302(0x8e,0x80);           /* 控制命令,WP=1,写保护*/
+ 921   1      }
+C51 COMPILER V7.00  1302YU18B20                                                            10/06/2009 21:39:46 PAGE 16  
+
+ 922          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3418    ----
+   CONSTANT SIZE    =     69    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     12      15
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,275 @@
+BL51 BANKED LINKER/LOCATER V5.00                                                        10/24/2009  20:30:26  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V5.00, INVOKED BY:
+C:\KEIL\C51\BIN\BL51.EXE ÍêÈ«´ò¿ª×Óº¯Êý³ÌÐò.obj TO ÍêÈ«´ò¿ª×Óº¯Êý RAMSIZE (256)
+
+
+MEMORY MODEL: SMALL
+
+
+INPUT MODULES INCLUDED:
+  ÍêÈ«´ò¿ª×Óº¯Êý³ÌÐò.obj (_ê__´ò______Êý___ò)
+  C:\KEIL\C51\LIB\C51S.LIB (?C_STARTUP)
+
+
+LINK MAP OF MODULE:  ÍêÈ«´ò¿ª×Óº¯Êý (_ê__´ò______Êý___ò)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+            * * * * * * *   D A T A   M E M O R Y   * * * * * * *
+            REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
+            DATA    0008H     000BH     UNIT         ?DT?_ê__´ò______Êý___ò
+                    0013H     000DH                  *** GAP ***
+            BIT     0020H.0   0000H.2   UNIT         ?BI?_ê__´ò______Êý___ò
+                    0020H.2   0000H.6                *** GAP ***
+            IDATA   0021H     0001H     UNIT         ?STACK
+
+            * * * * * * *   C O D E   M E M O R Y   * * * * * * *
+            CODE    0000H     0003H     ABSOLUTE     
+                    0003H     0008H                  *** GAP ***
+            CODE    000BH     0003H     ABSOLUTE     
+            CODE    000EH     00A6H     UNIT         ?PR?GORUN?_ê__´ò______Êý___ò
+            CODE    00B4H     0056H     UNIT         ?PR?MOTOR_COMPSLOWLYUP?_ê__´ò______Êý___ò
+            CODE    010AH     0036H     UNIT         ?PR?MAIN?_ê__´ò______Êý___ò
+            CODE    0140H     0022H     UNIT         ?PR?TIMEINT?_ê__´ò______Êý___ò
+            CODE    0162H     000FH     UNIT         ?PR?_DELAY?_ê__´ò______Êý___ò
+            CODE    0171H     000CH     UNIT         ?C_C51STARTUP
+
+
+
+OVERLAY MAP OF MODULE:   ÍêÈ«´ò¿ª×Óº¯Êý (_ê__´ò______Êý___ò)
+
+
+SEGMENT
+  +--> CALLED SEGMENT
+---------------------
+?C_C51STARTUP
+  +--> ?PR?MAIN?_ê__´ò______Êý___ò
+
+?PR?MAIN?_ê__´ò______Êý___ò
+  +--> ?PR?MOTOR_COMPSLOWLYUP?_ê__´ò______Êý...
+  +--> ?PR?_DELAY?_ê__´ò______Êý___ò
+
+?PR?MOTOR_COMPSLOWLYUP?_ê__´ò______Êý...
+  +--> ?PR?_DELAY?_ê__´ò______Êý___ò
+  +--> ?PR?GORUN?_ê__´ò______Êý___ò
+
+
+
+BL51 BANKED LINKER/LOCATER V5.00                                                      10/24/2009  20:30:26  PAGE 2
+
+
+SYMBOL TABLE OF MODULE:  ÍêÈ«´ò¿ª×Óº¯Êý (_ê__´ò______Êý___ò)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+
+  -------         MODULE        _ê__´ò______Êý___ò
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  C:0140H         PUBLIC        timeint
+  D:0090H         PUBLIC        P1
+  B:00B0H.4       PUBLIC        T0
+  B:00D0H.6       PUBLIC        AC
+  B:00B0H.5       PUBLIC        T1
+  B:00A8H.7       PUBLIC        EA
+  D:0008H         SYMBOL        spcount
+  B:0090H.0       PUBLIC        P1_0
+  B:0090H.1       PUBLIC        P1_1
+  B:0090H.2       PUBLIC        P1_2
+  D:000AH         PUBLIC        HadBeenDone
+  B:0090H.3       PUBLIC        P1_3
+  B:00B0H.7       PUBLIC        RD
+  B:00A8H.4       PUBLIC        ES
+  B:0098H.0       PUBLIC        RI
+  B:00B0H.2       PUBLIC        INT0
+  B:00D0H.7       PUBLIC        CY
+  B:0098H.1       PUBLIC        TI
+  B:00B0H.3       PUBLIC        INT1
+  B:00B8H.4       PUBLIC        PS
+  B:00D0H.2       PUBLIC        OV
+  C:010AH         PUBLIC        main
+  B:00B0H.6       PUBLIC        WR
+  D:000BH         SYMBOL        count
+  C:000EH         PUBLIC        gorun
+  D:000DH         SYMBOL        speedlevel
+  D:0089H         PUBLIC        TMOD
+  D:000FH         SYMBOL        step_index
+  B:0088H.1       PUBLIC        IE0
+  B:0088H.3       PUBLIC        IE1
+  B:0020H.0       SYMBOL        stop_flag
+  B:00A8H.1       PUBLIC        ET0
+  B:00A8H.3       PUBLIC        ET1
+  B:0088H.5       PUBLIC        TF0
+  B:0020H.1       SYMBOL        turn
+  B:0088H.7       PUBLIC        TF1
+  B:0098H.2       PUBLIC        RB8
+  D:008CH         PUBLIC        TH0
+  B:00A8H.0       PUBLIC        EX0
+  B:0088H.0       PUBLIC        IT0
+  B:0098H.3       PUBLIC        TB8
+  B:00A8H.2       PUBLIC        EX1
+  B:0088H.2       PUBLIC        IT1
+  B:00D0H.0       PUBLIC        P
+  B:0098H.7       PUBLIC        SM0
+  D:008AH         PUBLIC        TL0
+  B:0098H.6       PUBLIC        SM1
+  B:0098H.5       PUBLIC        SM2
+  B:00B8H.1       PUBLIC        PT0
+  B:00B8H.3       PUBLIC        PT1
+BL51 BANKED LINKER/LOCATER V5.00                                                      10/24/2009  20:30:26  PAGE 3
+
+
+  B:00D0H.3       PUBLIC        RS0
+  B:0088H.4       PUBLIC        TR0
+  B:00D0H.4       PUBLIC        RS1
+  B:0088H.6       PUBLIC        TR1
+  B:00B8H.0       PUBLIC        PX0
+  B:00B8H.2       PUBLIC        PX1
+  C:00B4H         PUBLIC        Motor_CompSlowlyUp
+  B:0098H.4       PUBLIC        REN
+  D:0011H         PUBLIC        i
+  D:0012H         PUBLIC        j
+  B:00B0H.0       PUBLIC        RXD
+  B:00B0H.1       PUBLIC        TXD
+  C:0162H         PUBLIC        _delay
+  B:00D0H.5       PUBLIC        F0
+  -------         PROC          MAIN
+  C:010AH         LINE#         23
+  C:010AH         LINE#         24
+  C:010AH         LINE#         25
+  C:010FH         LINE#         26
+  C:0113H         LINE#         27
+  C:0117H         LINE#         28
+  C:0119H         LINE#         30
+  C:011BH         LINE#         31
+  C:011DH         LINE#         32
+  C:011FH         LINE#         33
+  C:0121H         LINE#         35
+  C:0123H         LINE#         36
+  C:0126H         LINE#         37
+  C:0128H         LINE#         39
+  C:012BH         LINE#         40
+  C:012EH         LINE#         43
+  C:0130H         LINE#         45
+  C:0130H         LINE#         47
+  C:0133H         LINE#         48
+  C:013CH         LINE#         49
+  C:013EH         LINE#         50
+  -------         ENDPROC       MAIN
+  -------         PROC          MOTOR_COMPSLOWLYUP
+  C:00B4H         LINE#         54
+  C:00B4H         LINE#         55
+  C:00B6H         LINE#         56
+  C:00BBH         LINE#         57
+  C:00C0H         LINE#         58
+  C:00C2H         LINE#         59
+  C:00D6H         LINE#         60
+  C:00DBH         LINE#         61
+  C:00EEH         LINE#         62
+  C:0107H         LINE#         63
+  C:0109H         LINE#         64
+  -------         ENDPROC       MOTOR_COMPSLOWLYUP
+  -------         PROC          TIMEINT
+  C:0140H         LINE#         67
+  C:0142H         LINE#         69
+  C:0145H         LINE#         70
+  C:0148H         LINE#         73
+  C:0150H         LINE#         74
+  C:0157H         LINE#         75
+BL51 BANKED LINKER/LOCATER V5.00                                                      10/24/2009  20:30:26  PAGE 4
+
+
+  C:015FH         LINE#         76
+  C:015FH         LINE#         78
+  -------         ENDPROC       TIMEINT
+  -------         PROC          _DELAY
+  D:0006H         SYMBOL        endcount
+  C:0162H         LINE#         80
+  C:0162H         LINE#         81
+  C:0162H         LINE#         82
+  C:0167H         LINE#         83
+  C:0170H         LINE#         84
+  -------         ENDPROC       _DELAY
+  -------         PROC          GORUN
+  C:000EH         LINE#         86
+  C:000EH         LINE#         87
+  C:000EH         LINE#         88
+  C:0011H         LINE#         89
+  C:0011H         LINE#         90
+  C:0013H         LINE#         91
+  C:0015H         LINE#         92
+  C:0017H         LINE#         93
+  C:001AH         LINE#         95
+  C:001AH         LINE#         97
+  C:0044H         LINE#         98
+  C:0044H         LINE#         99
+  C:0044H         LINE#         100
+  C:0046H         LINE#         101
+  C:0048H         LINE#         102
+  C:0048H         LINE#         103
+  C:0048H         LINE#         104
+  C:004AH         LINE#         105
+  C:004AH         LINE#         106
+  C:004CH         LINE#         107
+  C:004EH         LINE#         108
+  C:004EH         LINE#         109
+  C:004EH         LINE#         110
+  C:0050H         LINE#         111
+  C:0050H         LINE#         112
+  C:0052H         LINE#         113
+  C:0054H         LINE#         114
+  C:0056H         LINE#         115
+  C:0058H         LINE#         116
+  C:005AH         LINE#         117
+  C:005AH         LINE#         118
+  C:005CH         LINE#         119
+  C:005EH         LINE#         120
+  C:005EH         LINE#         121
+  C:005EH         LINE#         122
+  C:0060H         LINE#         123
+  C:0060H         LINE#         124
+  C:0062H         LINE#         125
+  C:0064H         LINE#         126
+  C:0066H         LINE#         127
+  C:0068H         LINE#         128
+  C:006AH         LINE#         129
+  C:006AH         LINE#         130
+  C:006CH         LINE#         131
+  C:006EH         LINE#         132
+BL51 BANKED LINKER/LOCATER V5.00                                                      10/24/2009  20:30:26  PAGE 5
+
+
+  C:0070H         LINE#         133
+  C:0072H         LINE#         134
+  C:0074H         LINE#         135
+  C:0074H         LINE#         136
+  C:0076H         LINE#         137
+  C:0076H         LINE#         138
+  C:0076H         LINE#         139
+  C:0076H         LINE#         140
+  C:0078H         LINE#         141
+  C:0078H         LINE#         142
+  C:007AH         LINE#         143
+  C:007CH         LINE#         144
+  C:007EH         LINE#         145
+  C:0080H         LINE#         146
+  C:0080H         LINE#         148
+  C:0083H         LINE#         149
+  C:0083H         LINE#         150
+  C:008BH         LINE#         151
+  C:0096H         LINE#         152
+  C:009BH         LINE#         153
+  C:009CH         LINE#         155
+  C:009CH         LINE#         156
+  C:00A4H         LINE#         157
+  C:00ADH         LINE#         158
+  C:00B3H         LINE#         159
+  C:00B3H         LINE#         161
+  -------         ENDPROC       GORUN
+  -------         ENDMOD        _ê__´ò______Êý___ò
+
+Program Size: data=20.2 xdata=0 code=373
+LINK/LOCATE RUN COMPLETE.  0 WARNING(S),  0 ERROR(S)

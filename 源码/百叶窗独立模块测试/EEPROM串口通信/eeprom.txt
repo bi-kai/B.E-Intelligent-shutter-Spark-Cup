@@ -1,0 +1,128 @@
+#include <intrins.H>
+
+#define ENABLE_ISP 0x80 //EEPROM操作参数设置：系统工作时钟<40MHz 时，对IAP_CONTR 寄存器设置此值
+
+sfr IAP_DATA    = 0xe2;
+sfr IAP_ADDRH   = 0xe3;
+sfr IAP_ADDRL   = 0xe4;
+sfr IAP_CMD     = 0xe5;
+sfr IAP_TRIG    = 0xe6;
+sfr IAP_CONTR   = 0xe7;
+//定义Flash 操作等待时间及允许IAP/ISP/EEPROM 操作的常数
+
+union union_temp16{unsigned int un_temp16;unsigned char un_temp8[2];}my_unTemp16;
+
+unsigned char temp[20]="";
+
+unsigned char EEPROM_read(unsigned int add);   //读一字节，调用前需打开IAP 功能
+void EEPROM_write(unsigned int, unsigned char ch); //字节编程，调用前需打开IAP 功能
+void EEPROM_erase(unsigned int add);            //擦除扇区
+void EEPROM_IAP_Disable();                       //关闭IAP 功能
+
+void save_data_to_EEPROM(unsigned char num);
+
+void send(unsigned char str[]);
+
+/************************************************    EEPROM操作函数   **************************************************/
+
+unsigned char EEPROM_read(unsigned int add)	 //读一字节，调用前需打开IAP 功能，入口:DPTR = 字节地址，返回:A = 读出字节
+{
+    IAP_DATA = 0x00;
+    IAP_CMD = 0x01;                 //IAP/ISP/EEPROM 字节读命令
+    my_unTemp16.un_temp16 = add;
+    IAP_ADDRH = my_unTemp16.un_temp8[0];    //设置目标单元地址的高8 位地址
+    IAP_ADDRL = my_unTemp16.un_temp8[1];    //设置目标单元地址的低8 位地址
+    //EA = 0;
+    IAP_TRIG = 0x46;   //   46???   先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+    IAP_TRIG = 0xB9;   //   B9???   送完A5h 后，ISP/IAP 命令立即被触发起动
+    _nop_();
+    //EA = 1;
+    return (IAP_DATA);
+}
+
+
+void EEPROM_write(unsigned int add, unsigned char ch) //字节编程，调用前需打开IAP 功能，入口:DPTR = 字节地址, A= 须编程字节的数据
+{
+    IAP_CMD = 0x02;                 //IAP/ISP/EEPROM 字节编程命令
+    my_unTemp16.un_temp16 = add;
+   	IAP_ADDRH = my_unTemp16.un_temp8[0];    //设置目标单元地址的高8 位地址
+   	IAP_ADDRL = my_unTemp16.un_temp8[1];    //设置目标单元地址的低8 位地址
+   	IAP_DATA = ch;                  //要编程的数据先送进IAP_DATA 寄存器
+   	//EA = 0;
+   	IAP_TRIG = 0x46;   //   46???   先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+   	IAP_TRIG = 0xB9;   //   B9???   送完A5h 后，ISP/IAP 命令立即被触发起动
+    _nop_();
+   	//EA = 1;
+}
+
+
+void EEPROM_erase(unsigned int add)//擦除扇区, 入口:DPTR = 扇区地址
+{
+	IAP_CMD = 0x03;                 //IAP/ISP/EEPROM 扇区擦除命令
+    my_unTemp16.un_temp16 = add;
+    IAP_ADDRH = my_unTemp16.un_temp8[0];    //设置目标单元地址的高8 位地址
+    IAP_ADDRL = my_unTemp16.un_temp8[1];    //设置目标单元地址的低8 位地址
+
+    //EA = 0;
+    IAP_TRIG = 0x46;   //   46???   先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+    IAP_TRIG = 0xB9;   //   B9???   送完A5h 后，ISP/IAP 命令立即被触发起动
+    _nop_();
+    //EA = 1;
+}
+
+void EEPROM_IAP_Disable()
+{
+    //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态
+    //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+	IAP_CONTR = 0;      //关闭IAP 功能
+	IAP_CMD   = 0;      //清命令寄存器,使命令寄存器无命令,此句可不用
+	IAP_TRIG = 0;      //清命令触发寄存器,使命令触发寄存器无触发,此句可不用
+	IAP_ADDRH = 0;
+	IAP_ADDRL = 0;
+}
+
+
+
+void save_data_to_EEPROM(unsigned char num)		   //将temp[0]~temp[19]存入相应扇区，num为扇区号，范围0~57
+{
+ 	unsigned int i=0;
+	unsigned int eeprom_address=0x8000+num*0x200;
+
+    	IAP_CONTR = ENABLE_ISP;         //打开IAP 功能, 设置Flash 操作等待时间
+
+	EEPROM_erase(eeprom_address);           //擦除整个扇区
+
+	while(i<500)
+	{
+		EEPROM_write(eeprom_address,temp[i]);		//将 temp 写入 EEPROM
+		eeprom_address++;
+		i++;	
+	}
+  	EEPROM_IAP_Disable(); //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态
+}
+
+
+void send(unsigned char str[])
+{
+	unsigned int i=0;
+	while(str[i]!='\0')
+	{
+		SBUF=str[i];
+		while(!TI);
+		TI=0;
+		i++;
+	}
+}
+
+
+
+    SCON=0x50; //串口工作方式1，8位UART，波特率可变  
+    TH2=0xFF;           
+    TL2=0xFD;   
+    RCAP2H=0xFF;   
+    RCAP2L=0xFA; //波特率:115200 晶振=22.1184MHz  RCAP2L=0xF4 则波特率为57600
+    TCLK=1;   
+    RCLK=1;   
+    C_T2=0;   
+    EXEN2=0; //波特率发生器工作方式
+    TR2=1 ; //定时器2开始
